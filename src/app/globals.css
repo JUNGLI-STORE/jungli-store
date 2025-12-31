@@ -1,26 +1,43 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* 1. Brand Colors */
+  --color-jungli-orange: #FF5F1F;
+  --color-jungli-green: #0A3D2E;
+  --color-jungli-black: #000000;
+
+  /* 2. Comic Style Shadows */
+  --shadow-brutal: 8px 8px 0px 0px rgba(0, 0, 0, 1);
+  --shadow-brutal-sm: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+  --shadow-brutal-hover: 2px 2px 0px 0px rgba(0, 0, 0, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* 3. Base Styles (Using Standard CSS instead of @apply to stop the error) */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: white;
+  color: black;
+  margin: 0;
+  font-family: sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background-color: var(--color-jungli-orange);
+  color: white;
+}
+
+/* 4. Custom Utilities */
+.sawtooth {
+  clip-path: polygon(0 0, 5% 2%, 10% 0, 15% 2%, 20% 0, 25% 2%, 30% 0, 35% 2%, 40% 0, 45% 2%, 50% 0, 55% 2%, 60% 0, 65% 2%, 70% 0, 75% 2%, 80% 0, 85% 2%, 90% 0, 95% 2%, 100% 0, 100% 100%, 0 100%);
+}
+/* Animation for the infinite scrolling text */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 20s linear infinite;
 }
