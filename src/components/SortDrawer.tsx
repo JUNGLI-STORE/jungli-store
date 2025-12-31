@@ -97,5 +97,3 @@ export default function SortDrawer({ isOpen, onClose, activeSort, setSort }: Sor
   );
 }
 
-
-536539503397
