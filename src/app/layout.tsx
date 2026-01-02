@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JUNGLI | Luxury Sneakers, Street Prices",
-  description: "India's most affordable premium sneakers. Get master quality craftsmanship for under ₹3,999.",
+  title: "JUNGLI | Luxury Kicks, Street Prices",
+  description: "India's wildest sneaker drops. Master-quality silhouettes for under ₹3,999. Born of Fire.",
 };
 
 export default function RootLayout({
