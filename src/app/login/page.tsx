@@ -20,7 +20,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOtp({
         email: email,
         options: {
-          // Point to our callback route to handle the session properly
+          // Redirects to our callback route which now defaults to /profile
           emailRedirectTo: `${window.location.origin}/auth/callback`, 
         },
       });
@@ -43,6 +43,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
+        // Redirects to our callback route which now defaults to /profile
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
@@ -64,7 +65,7 @@ export default function LoginPage() {
         >
           <div className="absolute top-0 left-0 w-full h-2 bg-jungli-orange" />
           
-          <h1 className="text-5xl font-[1000] uppercase italic tracking-tighter mb-2">
+          <h1 className="text-5xl font-[1000] uppercase italic tracking-tighter mb-2 text-black">
             JOIN THE <span className="text-jungli-orange">JUNGLE</span>
           </h1>
           <p className="font-bold text-gray-500 italic mb-8 uppercase text-xs tracking-widest leading-tight">
@@ -82,7 +83,9 @@ export default function LoginPage() {
                   placeholder="YOUR@EMAIL.COM" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full p-4 font-black uppercase italic outline-none placeholder:text-gray-300 text-lg"
+                  // FIXED: Removed 'uppercase' class. Added 'lowercase' for clarity.
+                  // 'placeholder:uppercase' keeps the vibe of your design until they start typing.
+                  className="w-full p-4 font-bold lowercase italic outline-none placeholder:uppercase text-black text-lg"
                   required
                 />
               </div>

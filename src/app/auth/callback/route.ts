@@ -5,8 +5,11 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  // if "next" is in search params, use it as the redirect URL
-  const next = searchParams.get('next') ?? '/'
+  
+  // FIXED: Default redirect to '/profile' instead of '/'
+  // This ensures that after clicking the email link or Google Login, 
+  // the user lands on their orders/profile page.
+  const next = searchParams.get('next') ?? '/profile'
 
   if (code) {
     const cookieStore = await cookies()
@@ -25,19 +28,23 @@ export async function GET(request: Request) {
               )
             } catch {
               // The `setAll` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing
-              // user sessions.
+              // This can be ignored if you have middleware refreshing user sessions.
             }
           },
         },
       }
     )
+    
+    // Exchange the temporary code for a permanent user session
     const { error } = await supabase.auth.exchangeCodeForSession(code)
+    
     if (!error) {
+      // Redirect to the profile page on success
       return NextResponse.redirect(`${origin}${next}`)
     }
   }
 
-  // return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/auth/auth-error`)
+  // If there is an authentication error, send them back to login 
+  // with a generic error state
+  return NextResponse.redirect(`${origin}/login?error=session_expired`)
 }
