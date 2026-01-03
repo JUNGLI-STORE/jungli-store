@@ -1,229 +1,204 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation"; // Added useSearchParams
 import { motion } from "framer-motion";
-import { Upload, X, ArrowLeft, Loader2, Zap, Video, Image as ImageIcon, CheckCircle } from "lucide-react";
+import { Upload, X, ArrowLeft, Loader2, Zap, Image as ImageIcon, Check, Video } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 
-export default function AddProduct() {
+function AddProductForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const cloneId = searchParams.get('cloneId'); // Capture Clone ID from URL
+
   const [loading, setLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Form States
+  // FORM STATE
   const [formData, setFormData] = useState({
     name: "",
+    brand: "",
     luxury_price: "",
     jungli_price: "",
     tag: "NEW DROP",
-    description: ""
+    description: "",
+    video_url: "", // Fixed your error by adding this here
+    available_sizes: ["UK 6", "UK 7", "UK 8", "UK 9", "UK 10", "UK 11"]
   });
 
-  // Media States
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  // 1. Admin Security Check (Replace with your email)
   const ADMIN_EMAIL = "2.0dandotiya@gmail.com"; 
 
   useEffect(() => {
-    async function checkAdmin() {
+    async function checkAdminAndClone() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || user.email !== ADMIN_EMAIL) {
-        router.push("/"); // Redirect if not you
+        router.push("/"); 
       } else {
         setIsAdmin(true);
+
+        // CLONE LOGIC: If URL has cloneId, fetch that shoe
+        if (cloneId) {
+          const { data: original } = await supabase
+            .from('products')
+            .select('*')
+            .eq('id', cloneId)
+            .single();
+
+          if (original) {
+            setFormData({
+              name: `${original.name} (COPY)`,
+              brand: original.brand || "",
+              luxury_price: original.luxury_price.toString(),
+              jungli_price: original.jungli_price.toString(),
+              tag: original.tag || "NEW DROP",
+              description: original.description || "",
+              video_url: original.video_url || "",
+              available_sizes: original.available_sizes || []
+            });
+          }
+        }
       }
     }
-    checkAdmin();
-  }, [router]);
+    checkAdminAndClone();
+  }, [cloneId, router]);
 
-  // Handle Image Selection
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
-    }
-  };
-
-  // Helper function to upload files to Supabase Storage
-  const uploadFile = async (file: File, folder: string) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${folder}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('sneaker-assets')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('sneaker-assets')
-      .getPublicUrl(filePath);
-
-    return publicUrl;
+  const toggleSize = (size: string) => {
+    setFormData(prev => ({
+      ...prev,
+      available_sizes: prev.available_sizes.includes(size)
+        ? prev.available_sizes.filter(s => s !== size)
+        : [...prev.available_sizes, size]
+    }));
   };
 
   const handleLaunch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!imageFile) return alert("SNEAKER IMAGE IS MANDATORY!");
+    if (!imageFile && !cloneId) return alert("SNEAKER IMAGE IS MANDATORY!");
     setLoading(true);
 
     try {
-      // 1. Upload Assets
-      const imageUrl = await uploadFile(imageFile, 'images');
-      let videoUrl = "";
-      if (videoFile) {
-        videoUrl = await uploadFile(videoFile, 'videos');
+      let imageUrl = "";
+      
+      // Only upload if a new file is selected
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `images/${fileName}`;
+        await supabase.storage.from('sneaker-assets').upload(filePath, imageFile);
+        const { data: { publicUrl } } = supabase.storage.from('sneaker-assets').getPublicUrl(filePath);
+        imageUrl = publicUrl;
       }
 
-      // 2. Save to Database
-      const { error } = await supabase.from('products').insert([{
+      await supabase.from('products').insert([{
         name: formData.name.toUpperCase(),
+        brand: formData.brand.toUpperCase(),
         luxury_price: Number(formData.luxury_price),
         jungli_price: Number(formData.jungli_price),
-        image_url: imageUrl,
-        video_url: videoUrl,
+        image_url: imageUrl || (await supabase.from('products').select('image_url').eq('id', cloneId).single()).data?.image_url,
+        video_url: formData.video_url,
         tag: formData.tag.toUpperCase(),
         description: formData.description,
+        available_sizes: formData.available_sizes,
         is_available: true
       }]);
 
-      if (error) throw error;
-
-      alert("LAUNCH SUCCESSFUL! 🚀");
-      router.push('/'); // Go home to see the new drop
+      alert("DRIP LAUNCHED! 🚀");
+      router.push('/admin/inventory'); 
     } catch (err: any) {
-      console.error(err);
       alert("FAIL: " + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isAdmin) return null; // Prevent flicker while checking auth
+  if (!isAdmin) return null;
 
   return (
     <>
       <Navbar />
       <main className="min-h-screen bg-gray-100 p-6 md:p-12">
-        <div className="max-w-4xl mx-auto">
-          
-          <Link href="/" className="inline-flex items-center gap-2 font-black uppercase italic mb-8 hover:text-jungli-orange transition-colors">
-            <ArrowLeft size={20} /> Abort Mission
-          </Link>
-
-          <form onSubmit={handleLaunch} className="bg-white border-8 border-black p-8 md:p-12 shadow-brutal relative overflow-hidden">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-4">
-                <h1 className="text-6xl font-[1000] uppercase italic tracking-tighter leading-none">
-                    ADD NEW <span className="text-jungli-orange">STASH</span>
-                </h1>
-                <div className="bg-black text-white px-4 py-1 border-2 border-black font-black uppercase italic text-xs rotate-2 shadow-brutal-sm">
-                    Admin Portal
-                </div>
-            </div>
+        <div className="max-w-5xl mx-auto">
+          <form onSubmit={handleLaunch} className="bg-white border-8 border-black p-8 md:p-12 shadow-brutal relative">
+            <h1 className="text-6xl font-[1000] uppercase italic tracking-tighter leading-none mb-12">
+              {cloneId ? "CLONE" : "ADD"} <span className="text-jungli-orange">STASH</span>
+            </h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              
-              {/* LEFT SIDE: MEDIA UPLOAD */}
+              {/* MEDIA & SIZES */}
               <div className="space-y-8">
-                {/* Image Upload */}
-                <div className="group">
-                  <label className="block font-black uppercase italic mb-2 text-xs tracking-widest">Sneaker Shot (PNG/JPG)</label>
-                  <div className="relative border-4 border-dashed border-black aspect-square flex flex-col items-center justify-center bg-gray-50 hover:bg-yellow-50 transition-colors cursor-pointer overflow-hidden shadow-brutal-sm">
+                <div className="relative border-4 border-dashed border-black aspect-square flex flex-col items-center justify-center bg-gray-50 overflow-hidden shadow-brutal-sm">
                     {imagePreview ? (
-                      <img src={imagePreview} className="w-full h-full object-contain p-4" alt="Preview" />
+                      <img src={imagePreview} className="w-full h-full object-contain p-4" alt="" />
                     ) : (
-                      <div className="text-center p-6">
-                        <ImageIcon size={48} className="mx-auto mb-2 text-gray-300 group-hover:text-black transition-colors" />
-                        <p className="font-black uppercase italic text-[10px] text-gray-400 group-hover:text-black">Drop Hero Image</p>
+                      <div className="text-center p-6 text-gray-400">
+                        <ImageIcon size={48} className="mx-auto mb-2" />
+                        <p className="font-black uppercase italic text-[10px]">Upload New Hero Image</p>
                       </div>
                     )}
-                    <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleImageChange} accept="image/*" />
-                  </div>
+                    <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) { setImageFile(file); setImagePreview(URL.createObjectURL(file)); }
+                    }} accept="image/*" />
                 </div>
 
-                {/* Video Upload */}
-                <div>
-                  <label className="block font-black uppercase italic mb-2 text-xs tracking-widest text-gray-400">Sneaker Clip (MP4 - OPTIONAL)</label>
-                  <div className="relative border-4 border-dashed border-gray-300 p-6 flex items-center justify-center bg-gray-50 hover:border-black transition-all cursor-pointer">
-                    <Video size={24} className={videoFile ? "text-green-500" : "text-gray-300"} />
-                    <p className="ml-3 font-black uppercase italic text-[10px] text-gray-400 truncate">
-                      {videoFile ? videoFile.name : "Upload Reel/Video"}
-                    </p>
-                    <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} accept="video/*" />
-                  </div>
+                <div className="bg-gray-50 border-4 border-black p-6">
+                    <label className="block font-black uppercase italic mb-4 text-xs">Available Sizes (UK)</label>
+                    <div className="grid grid-cols-3 gap-3">
+                        {["UK 6", "UK 7", "UK 8", "UK 9", "UK 10", "UK 11"].map(size => (
+                            <button key={size} type="button" onClick={() => toggleSize(size)}
+                                className={`py-3 border-4 border-black font-black italic text-sm transition-all
+                                    ${formData.available_sizes.includes(size) ? 'bg-jungli-orange text-white shadow-none translate-x-1 translate-y-1' : 'bg-white shadow-brutal-sm'}`}
+                            >
+                                {size}
+                            </button>
+                        ))}
+                    </div>
                 </div>
               </div>
 
-              {/* RIGHT SIDE: DATA FIELDS */}
+              {/* DATA FIELDS */}
               <div className="space-y-6">
-                <div className="space-y-2">
-                    <label className="font-black uppercase text-xs italic">Model Name</label>
-                    <input required placeholder="E.G. RETRO BRED 1" className="w-full p-4 border-4 border-black font-black uppercase italic outline-none shadow-brutal-sm focus:bg-jungli-orange/5 transition-all" 
-                    onChange={e => setFormData({...formData, name: e.target.value})} />
-                </div>
+                <input required value={formData.brand} placeholder="BRAND" className="w-full p-4 border-4 border-black font-black uppercase italic outline-none shadow-brutal-sm" 
+                onChange={e => setFormData({...formData, brand: e.target.value})} />
+                
+                <input required value={formData.name} placeholder="MODEL NAME" className="w-full p-4 border-4 border-black font-black uppercase italic outline-none shadow-brutal-sm" 
+                onChange={e => setFormData({...formData, name: e.target.value})} />
 
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <label className="font-black uppercase text-xs italic text-gray-400">Luxury (₹)</label>
-                        <input required type="number" placeholder="18000" className="w-full p-4 border-4 border-black font-black italic outline-none shadow-brutal-sm focus:bg-gray-50" 
-                        onChange={e => setFormData({...formData, luxury_price: e.target.value})} />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="font-black uppercase text-xs italic text-jungli-orange">Jungli (₹)</label>
-                        <input required type="number" placeholder="3499" className="w-full p-4 border-4 border-black font-black italic outline-none shadow-brutal-sm focus:bg-orange-50 text-jungli-orange" 
-                        onChange={e => setFormData({...formData, jungli_price: e.target.value})} />
-                    </div>
+                    <input required value={formData.luxury_price} type="number" placeholder="LUXURY (₹)" className="w-full p-4 border-4 border-black font-black italic shadow-brutal-sm" 
+                    onChange={e => setFormData({...formData, luxury_price: e.target.value})} />
+                    
+                    <input required value={formData.jungli_price} type="number" placeholder="JUNGLI (₹)" className="w-full p-4 border-4 border-black font-black italic shadow-brutal-sm text-jungli-orange" 
+                    onChange={e => setFormData({...formData, jungli_price: e.target.value})} />
                 </div>
 
-                <div className="space-y-2">
-                    <label className="font-black uppercase text-xs italic">Drop Tag</label>
-                    <select 
-                      className="w-full p-4 border-4 border-black font-black uppercase italic outline-none shadow-brutal-sm bg-white"
-                      onChange={e => setFormData({...formData, tag: e.target.value})}
-                    >
-                        <option value="NEW DROP">NEW DROP</option>
-                        <option value="LIMITED">LIMITED EDITION</option>
-                        <option value="BEST SELLER">BEST SELLER</option>
-                        <option value="ARCHIVE">ARCHIVE</option>
-                    </select>
-                </div>
+                {/* VIDEO URL FIELD - This works now! */}
+                <input value={formData.video_url} placeholder="VIDEO URL (MP4)" className="w-full p-4 border-4 border-black font-black italic outline-none shadow-brutal-sm" 
+                onChange={e => setFormData({...formData, video_url: e.target.value})} />
 
-                <div className="space-y-2">
-                    <label className="font-black uppercase text-xs italic">The Story (Description)</label>
-                    <textarea rows={4} placeholder="Why is this pair special?" className="w-full p-4 border-4 border-black font-bold uppercase italic outline-none shadow-brutal-sm focus:bg-gray-50" 
-                    onChange={e => setFormData({...formData, description: e.target.value})} />
-                </div>
+                <textarea value={formData.description} rows={5} placeholder="THE STORY..." className="w-full p-4 border-4 border-black font-bold uppercase italic outline-none shadow-brutal-sm focus:bg-gray-50 transition-all" 
+                onChange={e => setFormData({...formData, description: e.target.value})} />
               </div>
             </div>
 
-            {/* Launch Button */}
-            <motion.button 
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                disabled={loading}
-                className="w-full mt-12 bg-black text-white py-8 border-4 border-black font-[1000] text-4xl uppercase italic shadow-brutal hover:shadow-none hover:translate-x-2 hover:translate-y-2 transition-all flex items-center justify-center gap-6 disabled:opacity-50"
-            >
-              {loading ? (
-                <Loader2 className="animate-spin" size={40} />
-              ) : (
-                <>LAUNCH DRIP <Zap size={40} fill="white" /></>
-              )}
-            </motion.button>
-
-            <div className="mt-8 flex items-center justify-center gap-2 text-[10px] font-black uppercase italic text-gray-400 tracking-widest">
-                <CheckCircle size={12} /> Real-time sync with global storefront
-            </div>
+            <button disabled={loading} className="w-full mt-12 bg-black text-white py-8 border-4 border-black font-[1000] text-4xl uppercase italic shadow-brutal hover:shadow-none hover:translate-x-2 hover:translate-y-2 transition-all flex items-center justify-center gap-6 disabled:opacity-50">
+              {loading ? <Loader2 className="animate-spin" size={40} /> : <>LAUNCH DRIP <Zap size={40} fill="white" /></>}
+            </button>
           </form>
         </div>
       </main>
     </>
+  );
+}
+
+export default function AddProduct() {
+  return (
+    <Suspense fallback={<div className="p-20 font-black italic">PREPARING STASH...</div>}>
+      <AddProductForm />
+    </Suspense>
   );
 }

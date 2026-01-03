@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/Navbar';
-import { ChevronRight, ShieldCheck, Truck, RotateCcw, AlertTriangle, Loader2, Play, Info } from 'lucide-react';
+import { ChevronRight, ShieldCheck, Truck, RotateCcw, AlertTriangle, Loader2, Play, Info, Image as ImageIcon } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useParams } from 'next/navigation'; 
 import { supabase } from '@/lib/supabase'; 
@@ -17,8 +17,6 @@ export default function ProductPage() {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
   const [viewMode, setViewMode] = useState<'image' | 'video'>('image');
-
-  const sizes = ["UK 6", "UK 7", "UK 8", "UK 9", "UK 10", "UK 11"];
 
   useEffect(() => {
     async function getProductDetails() {
@@ -81,6 +79,8 @@ export default function ProductPage() {
     );
   }
 
+  // DYNAMIC SIZES from your Supabase Column
+  const sizes = product.available_sizes || []; 
   const discount = Math.round(((product.luxury_price - product.jungli_price) / product.luxury_price) * 100);
 
   return (
@@ -89,7 +89,7 @@ export default function ProductPage() {
       <main className="min-h-screen bg-white pb-20">
         <div className="max-w-7xl mx-auto px-6 pt-10 grid grid-cols-1 lg:grid-cols-2 gap-16">
           
-          {/* MEDIA SECTION (Left Side) */}
+          {/* LEFT SIDE: MEDIA VIEWER */}
           <div className="space-y-6">
             <div className="relative group border-8 border-black shadow-brutal aspect-square bg-gray-100 overflow-hidden">
               <AnimatePresence mode="wait">
@@ -99,6 +99,7 @@ export default function ProductPage() {
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                     src={product.image_url} 
                     className="w-full h-full object-cover"
+                    alt={product.name}
                   />
                 ) : (
                   <motion.video 
@@ -111,42 +112,42 @@ export default function ProductPage() {
                 )}
               </AnimatePresence>
 
-              {/* Video Toggle Button (Only if video exists) */}
+              {/* Video Toggle Badge */}
               {product.video_url && (
                 <button 
                   onClick={() => setViewMode(viewMode === 'image' ? 'video' : 'image')}
-                  className="absolute bottom-6 right-6 bg-yellow-400 border-4 border-black p-4 shadow-brutal-sm hover:scale-110 transition-transform z-10"
+                  className="absolute bottom-6 right-6 bg-yellow-400 border-4 border-black p-4 shadow-brutal-sm hover:scale-110 active:scale-95 transition-all z-10"
                 >
-                  {viewMode === 'image' ? <Play fill="black" /> : <ImageIcon size={24} />}
+                  {viewMode === 'image' ? <Play fill="black" size={24} /> : <ImageIcon size={24} />}
                 </button>
               )}
 
-              {/* Price Tag Overlay */}
+              {/* Discount Tag */}
               <div className="absolute top-6 left-6 bg-jungli-orange text-white px-4 py-2 border-4 border-black font-black italic -rotate-12 shadow-brutal-sm">
                 -{discount}% OFF
               </div>
             </div>
 
-            {/* Thumbnail Navigation */}
+            {/* Thumbnails */}
             <div className="flex gap-4">
                <div 
                  onClick={() => setViewMode('image')}
-                 className={`w-24 h-24 border-4 border-black cursor-pointer transition-all ${viewMode === 'image' ? 'shadow-brutal-sm translate-x-1' : 'opacity-50'}`}
+                 className={`w-24 h-24 border-4 border-black cursor-pointer transition-all ${viewMode === 'image' ? 'shadow-brutal-sm translate-x-1 translate-y-1' : 'opacity-40 grayscale hover:opacity-100'}`}
                >
-                 <img src={product.image_url} className="w-full h-full object-cover" />
+                 <img src={product.image_url} className="w-full h-full object-cover" alt="thumb" />
                </div>
                {product.video_url && (
                  <div 
                    onClick={() => setViewMode('video')}
-                   className={`w-24 h-24 border-4 border-black bg-black flex items-center justify-center cursor-pointer transition-all ${viewMode === 'video' ? 'shadow-brutal-sm translate-x-1' : 'opacity-50'}`}
+                   className={`w-24 h-24 border-4 border-black bg-black flex items-center justify-center cursor-pointer transition-all ${viewMode === 'video' ? 'shadow-brutal-sm translate-x-1 translate-y-1' : 'opacity-40 grayscale hover:opacity-100'}`}
                  >
-                   <Play color="white" />
+                   <Play color="white" size={20} />
                  </div>
                )}
             </div>
           </div>
 
-          {/* PRODUCT INFO (Right Side) */}
+          {/* RIGHT SIDE: PRODUCT DETAILS */}
           <div className="flex flex-col">
             <nav className="flex items-center gap-2 text-xs font-black uppercase mb-6 text-gray-400 italic">
                 <Link href="/" className="hover:text-black">Vault</Link> 
@@ -166,63 +167,70 @@ export default function ProductPage() {
             <div className="bg-jungli-green/5 border-l-8 border-jungli-green p-6 mb-10">
                 <p className="font-bold italic text-black leading-relaxed">
                    <Info size={16} className="inline mr-2 text-jungli-green" />
-                   {product.description || "Crafted with master-grade materials. This isn't just a copy; it's a re-engineered street beast."}
+                   {product.description || "The highest-tier materials, original silhouette, and iconic comfort. Why pay for the logo when you can have the quality?"}
                 </p>
             </div>
 
-            {/* SIZE SELECTOR */}
+            {/* SIZE SELECTOR (DYNAMIC) */}
             <div className="mb-10">
                 <div className="flex justify-between items-end mb-4">
                     <span className="font-black uppercase italic text-sm tracking-widest bg-black text-white px-2">Select Size (UK)</span>
                     <span className="text-xs font-bold underline cursor-pointer hover:text-jungli-orange">View Guide</span>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
-                    {sizes.map((size) => (
-                        <button 
-                            key={size}
-                            onClick={() => { setSelectedSize(size); setShowError(false); }}
-                            className={`py-5 border-4 border-black font-[1000] text-lg transition-all italic
-                                ${selectedSize === size 
-                                ? 'bg-jungli-orange text-white translate-x-1 translate-y-1 shadow-none' 
-                                : 'bg-white text-black shadow-brutal-sm hover:bg-yellow-400'}`}
-                        >
-                            {size}
-                        </button>
-                    ))}
-                </div>
+                
+                {sizes.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-4">
+                        {sizes.map((size: string) => (
+                            <button 
+                                key={size}
+                                onClick={() => { setSelectedSize(size); setShowError(false); }}
+                                className={`py-5 border-4 border-black font-[1000] text-lg transition-all italic
+                                    ${selectedSize === size 
+                                    ? 'bg-jungli-orange text-white translate-x-1 translate-y-1 shadow-none' 
+                                    : 'bg-white text-black shadow-brutal-sm hover:bg-yellow-400'}`}
+                            >
+                                {size}
+                            </button>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="p-4 border-4 border-black bg-red-50 text-red-600 font-black italic uppercase">
+                        All sizes currently out of stash
+                    </div>
+                )}
                 
                 {showError && (
                     <motion.p initial={{ x: -10 }} animate={{ x: 0 }} className="text-red-600 font-black uppercase text-xs mt-6 flex items-center gap-2">
-                        <AlertTriangle size={16}/> MISSION FAILED: SELECT A SIZE FIRST!
+                        <AlertTriangle size={16}/> ERROR: SELECT A SIZE TO PROCEED!
                     </motion.p>
                 )}
             </div>
 
-            {/* ACTION BUTTON */}
+            {/* ACTION BUTTON (Respects is_available column) */}
             <button 
-                disabled={!product.is_available}
+                disabled={!product.is_available || sizes.length === 0}
                 onClick={handleAddToCart}
                 className={`w-full text-white text-3xl font-[1000] py-8 border-4 border-black shadow-brutal transition-all uppercase italic mb-10
-                    ${product.is_available 
+                    ${(product.is_available && sizes.length > 0)
                       ? 'bg-black hover:shadow-none hover:translate-x-2 hover:translate-y-2 active:scale-95' 
                       : 'bg-gray-300 cursor-not-allowed grayscale shadow-none translate-x-1 translate-y-1'}`}
             >
-                {product.is_available ? "Secure the Drip" : "STASH EMPTY"}
+                {product.is_available && sizes.length > 0 ? "Secure the Drip" : "STASH EMPTY"}
             </button>
 
             {/* TRUST SECTION */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-10 border-t-4 border-black border-dashed">
-                <div className="text-center md:text-left">
-                    <Truck size={24} className="mb-2 mx-auto md:mx-0" />
-                    <p className="font-black uppercase text-[10px]">Fast Pan-India</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-10 border-t-4 border-black border-dashed">
+                <div className="flex flex-col items-center md:items-start">
+                    <Truck size={24} className="mb-2" />
+                    <p className="font-black uppercase text-[10px] italic">Express Pan-India</p>
                 </div>
-                <div className="text-center md:text-left">
-                    <RotateCcw size={24} className="mb-2 mx-auto md:mx-0" />
-                    <p className="font-black uppercase text-[10px]">7-Day Stash Swap</p>
+                <div className="flex flex-col items-center md:items-start">
+                    <RotateCcw size={24} className="mb-2" />
+                    <p className="font-black uppercase text-[10px] italic">7-Day Swap Policy</p>
                 </div>
-                <div className="text-center md:text-left">
-                    <ShieldCheck size={24} className="mb-2 mx-auto md:mx-0" />
-                    <p className="font-black uppercase text-[10px]">Double Checked</p>
+                <div className="flex flex-col items-center md:items-start">
+                    <ShieldCheck size={24} className="mb-2" />
+                    <p className="font-black uppercase text-[10px] italic">Verified Quality</p>
                 </div>
             </div>
           </div>
@@ -230,9 +238,4 @@ export default function ProductPage() {
       </main>
     </>
   );
-}
-
-// Icon helper
-function ImageIcon({ size }: { size: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>;
 }
