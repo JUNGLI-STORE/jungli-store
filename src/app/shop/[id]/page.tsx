@@ -17,6 +17,9 @@ export default function ProductPage() {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
   const [viewMode, setViewMode] = useState<'image' | 'video'>('image');
+  
+  // 1. New State for the Main Image in the Gallery
+  const [activeImage, setActiveImage] = useState<string | null>(null);
 
   useEffect(() => {
     async function getProductDetails() {
@@ -29,6 +32,8 @@ export default function ProductPage() {
 
         if (error) throw error;
         setProduct(data);
+        // Set the first image as the default active image
+        setActiveImage(data.image_url);
       } catch (err) {
         console.error("Error fetching product:", err);
       } finally {
@@ -79,8 +84,8 @@ export default function ProductPage() {
     );
   }
 
-  // DYNAMIC SIZES from your Supabase Column
   const sizes = product.available_sizes || []; 
+  const gallery = product.images || [product.image_url]; // Fallback to main image if array is empty
   const discount = Math.round(((product.luxury_price - product.jungli_price) / product.luxury_price) * 100);
 
   return (
@@ -89,15 +94,18 @@ export default function ProductPage() {
       <main className="min-h-screen bg-white pb-20">
         <div className="max-w-7xl mx-auto px-6 pt-10 grid grid-cols-1 lg:grid-cols-2 gap-16">
           
-          {/* LEFT SIDE: MEDIA VIEWER */}
+          {/* LEFT SIDE: MULTI-IMAGE GALLERY */}
           <div className="space-y-6">
             <div className="relative group border-8 border-black shadow-brutal aspect-square bg-gray-100 overflow-hidden">
               <AnimatePresence mode="wait">
                 {viewMode === 'image' ? (
                   <motion.img 
-                    key="image"
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    src={product.image_url} 
+                    key={activeImage} // Key ensures animation plays on image swap
+                    initial={{ opacity: 0, x: 20 }} 
+                    animate={{ opacity: 1, x: 0 }} 
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                    src={activeImage || product.image_url} 
                     className="w-full h-full object-cover"
                     alt={product.name}
                   />
@@ -128,20 +136,29 @@ export default function ProductPage() {
               </div>
             </div>
 
-            {/* Thumbnails */}
-            <div className="flex gap-4">
-               <div 
-                 onClick={() => setViewMode('image')}
-                 className={`w-24 h-24 border-4 border-black cursor-pointer transition-all ${viewMode === 'image' ? 'shadow-brutal-sm translate-x-1 translate-y-1' : 'opacity-40 grayscale hover:opacity-100'}`}
-               >
-                 <img src={product.image_url} className="w-full h-full object-cover" alt="thumb" />
-               </div>
+            {/* THUMBNAIL TRACK */}
+            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+               {gallery.map((img: string, idx: number) => (
+                 <div 
+                   key={idx}
+                   onClick={() => { setActiveImage(img); setViewMode('image'); }}
+                   className={`w-24 h-24 border-4 border-black flex-shrink-0 cursor-pointer transition-all bg-white
+                     ${activeImage === img && viewMode === 'image' 
+                        ? 'shadow-brutal-sm translate-x-1 translate-y-1' 
+                        : 'opacity-40 hover:opacity-100 grayscale hover:grayscale-0'}`}
+                 >
+                   <img src={img} className="w-full h-full object-cover" alt={`view-${idx}`} />
+                 </div>
+               ))}
+               
+               {/* Video Thumbnail (If video exists) */}
                {product.video_url && (
                  <div 
                    onClick={() => setViewMode('video')}
-                   className={`w-24 h-24 border-4 border-black bg-black flex items-center justify-center cursor-pointer transition-all ${viewMode === 'video' ? 'shadow-brutal-sm translate-x-1 translate-y-1' : 'opacity-40 grayscale hover:opacity-100'}`}
+                   className={`w-24 h-24 border-4 border-black bg-black flex items-center justify-center flex-shrink-0 cursor-pointer transition-all
+                     ${viewMode === 'video' ? 'shadow-brutal-sm translate-x-1 translate-y-1' : 'opacity-40 hover:opacity-100'}`}
                  >
-                   <Play color="white" size={20} />
+                   <Play color="white" size={24} />
                  </div>
                )}
             </div>
@@ -167,11 +184,11 @@ export default function ProductPage() {
             <div className="bg-jungli-green/5 border-l-8 border-jungli-green p-6 mb-10">
                 <p className="font-bold italic text-black leading-relaxed">
                    <Info size={16} className="inline mr-2 text-jungli-green" />
-                   {product.description || "The highest-tier materials, original silhouette, and iconic comfort. Why pay for the logo when you can have the quality?"}
+                   {product.description || "Crafted with master-grade materials. This isn't just a copy; it's a re-engineered street beast."}
                 </p>
             </div>
 
-            {/* SIZE SELECTOR (DYNAMIC) */}
+            {/* SIZE SELECTOR */}
             <div className="mb-10">
                 <div className="flex justify-between items-end mb-4">
                     <span className="font-black uppercase italic text-sm tracking-widest bg-black text-white px-2">Select Size (UK)</span>
@@ -195,7 +212,7 @@ export default function ProductPage() {
                     </div>
                 ) : (
                     <div className="p-4 border-4 border-black bg-red-50 text-red-600 font-black italic uppercase">
-                        All sizes currently out of stash
+                        Out of Stash
                     </div>
                 )}
                 
@@ -206,7 +223,7 @@ export default function ProductPage() {
                 )}
             </div>
 
-            {/* ACTION BUTTON (Respects is_available column) */}
+            {/* ACTION BUTTON */}
             <button 
                 disabled={!product.is_available || sizes.length === 0}
                 onClick={handleAddToCart}
@@ -218,7 +235,7 @@ export default function ProductPage() {
                 {product.is_available && sizes.length > 0 ? "Secure the Drip" : "STASH EMPTY"}
             </button>
 
-            {/* TRUST SECTION */}
+            {/* TRUST BADGES */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-10 border-t-4 border-black border-dashed">
                 <div className="flex flex-col items-center md:items-start">
                     <Truck size={24} className="mb-2" />
