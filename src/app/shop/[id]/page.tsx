@@ -2,22 +2,24 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/Navbar';
+import ProductAccordion from '@/components/ProductAccordion'; // Ensure this file is updated!
 import { 
   ChevronRight, ShieldCheck, Truck, RotateCcw, 
   AlertTriangle, Loader2, Play, Info, 
-  Image as ImageIcon, Star, MessageSquare, Quote
+  Image as ImageIcon, Star, Quote, Lock, X
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
-import { useParams } from 'next/navigation'; 
+import { useParams, useRouter } from 'next/navigation'; 
 import { supabase } from '@/lib/supabase'; 
 import Link from 'next/link';
 
 export default function ProductPage() {
   const { id } = useParams(); 
-  const { addToCart } = useCart();
+  const { addToCart, setIsCartOpen } = useCart();
+  const router = useRouter();
   
   const [product, setProduct] = useState<any>(null);
-  const [reviews, setReviews] = useState<any[]>([]); // New state for reviews
+  const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
@@ -26,7 +28,6 @@ export default function ProductPage() {
   useEffect(() => {
     async function getProductAndReviews() {
       try {
-        // 1. Fetch Product
         const { data: pData, error: pError } = await supabase
           .from('products')
           .select('*')
@@ -37,7 +38,6 @@ export default function ProductPage() {
         setProduct(pData);
         setActiveMedia({ type: 'image', url: pData.image_url });
 
-        // 2. Fetch Manual Reviews for this product
         const { data: rData } = await supabase
           .from('product_reviews')
           .select('*')
@@ -45,14 +45,12 @@ export default function ProductPage() {
           .order('created_at', { ascending: false });
 
         if (rData) setReviews(rData);
-
       } catch (err) {
         console.error("Error fetching product data:", err);
       } finally {
         setLoading(false);
       }
     }
-
     if (id) getProductAndReviews();
   }, [id]);
 
@@ -70,6 +68,7 @@ export default function ProductPage() {
       size: selectedSize,
       quantity: 1
     });
+    setIsCartOpen(true);
   };
 
   if (loading) return (
@@ -95,7 +94,7 @@ export default function ProductPage() {
       <main className="min-h-screen bg-white pb-40">
         <div className="max-w-7xl mx-auto px-6 pt-10 grid grid-cols-1 lg:grid-cols-2 gap-16">
           
-          {/* LEFT: MEDIA GALLERY */}
+          {/* LEFT: MEDIA GALLERY (MULTI-IMAGE & VIDEO) */}
           <div className="space-y-6">
             <div className="relative group border-8 border-black shadow-brutal aspect-square bg-gray-100 overflow-hidden">
               <AnimatePresence mode="wait">
@@ -113,12 +112,12 @@ export default function ProductPage() {
                   />
                 )}
               </AnimatePresence>
-              <div className="absolute top-6 left-6 bg-jungli-orange text-white px-4 py-2 border-4 border-black font-black italic -rotate-12 shadow-brutal-sm">
+              <div className="absolute top-6 left-6 bg-jungli-orange text-white px-4 py-2 border-4 border-black font-black italic -rotate-12 shadow-brutal-sm text-sm">
                 -{discount}% OFF
               </div>
             </div>
 
-            {/* THUMBNAILS */}
+            {/* THUMBNAILS TRACK */}
             <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
                {gallery.map((img: string, idx: number) => (
                  <div key={idx} onClick={() => setActiveMedia({ type: 'image', url: img })}
@@ -137,58 +136,65 @@ export default function ProductPage() {
             </div>
           </div>
 
-          {/* RIGHT: DETAILS */}
+          {/* RIGHT: PRODUCT INFO & PURCHASE */}
           <div className="flex flex-col">
-            <nav className="flex items-center gap-2 text-xs font-black uppercase mb-6 text-gray-400 italic">
-                <Link href="/" className="hover:text-black">Vault</Link> <ChevronRight size={12}/> 
+            <nav className="flex items-center gap-2 text-[10px] font-black uppercase mb-6 text-gray-400 italic tracking-widest">
+                <Link href="/" className="hover:text-black">Vault</Link> <ChevronRight size={10}/> 
                 <span className="text-black underline decoration-jungli-orange">{product.name}</span>
             </nav>
 
-            <h1 className="text-6xl md:text-8xl font-[1000] uppercase italic tracking-tighter leading-[0.8] mb-6">{product.name}</h1>
+            {/* Brand & Model Logic for Long Names */}
+            <p className="text-sm font-black text-gray-400 uppercase italic mb-2 tracking-[0.2em]">{product.brand}</p>
+            <h1 className="text-[clamp(2.5rem,7vw,5.5rem)] font-[1000] uppercase italic tracking-tighter leading-[0.8] mb-8 text-black">
+              {product.name}
+            </h1>
             
-            <div className="flex items-baseline gap-4 mb-8">
-                <span className="text-5xl font-[1000] text-black italic">₹{product.jungli_price.toLocaleString()}</span>
+            <div className="flex items-baseline gap-4 mb-10">
+                <span className="text-5xl font-[1000] text-black italic tracking-tighter">₹{product.jungli_price.toLocaleString()}</span>
                 <span className="text-2xl font-bold text-gray-300 line-through italic">₹{product.luxury_price.toLocaleString()}</span>
-            </div>
-
-            <div className="bg-jungli-green/5 border-l-8 border-jungli-green p-6 mb-10 shadow-brutal-sm">
-                <p className="font-bold italic text-black leading-relaxed flex gap-3">
-                   <Info size={20} className="flex-shrink-0 text-jungli-green" />
-                   {product.description || "Crafted with master-grade materials. Built for the streets."}
-                </p>
             </div>
 
             {/* SIZE SELECTOR */}
             <div className="mb-10">
                 <div className="flex justify-between items-end mb-4">
-                    <span className="font-black uppercase italic text-sm bg-black text-white px-2">Select Size (UK)</span>
-                    <span className="text-xs font-bold underline cursor-pointer hover:text-jungli-orange">Size Guide</span>
+                    <span className="font-black uppercase italic text-xs bg-black text-white px-2 py-0.5 tracking-widest">Select Size (UK)</span>
+                    <span className="text-[10px] font-black uppercase underline cursor-pointer hover:text-jungli-orange">Size Info</span>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                     {(product.available_sizes || []).map((size: string) => (
                         <button key={size} onClick={() => { setSelectedSize(size); setShowError(false); }}
                             className={`py-5 border-4 border-black font-[1000] text-lg transition-all italic
-                                ${selectedSize === size ? 'bg-jungli-orange text-white translate-x-1 shadow-none' : 'bg-white shadow-brutal-sm hover:bg-yellow-400'}`}>
+                                ${selectedSize === size ? 'bg-jungli-orange text-white translate-x-1 shadow-none' : 'bg-white text-black shadow-brutal-sm hover:bg-yellow-400'}`}>
                             {size}
                         </button>
                     ))}
                 </div>
                 {showError && (
-                    <motion.p initial={{ x: -10 }} animate={{ x: 0 }} className="text-red-600 font-black uppercase text-xs mt-6 flex items-center gap-2">
-                        <AlertTriangle size={16}/> ERROR: CHOOSE SIZE TO SECURE DRIP!
+                    <motion.p initial={{ x: -10 }} animate={{ x: 0 }} className="text-red-600 font-black uppercase text-[10px] mt-6 flex items-center gap-2">
+                        <AlertTriangle size={14}/> CHOOSE A SIZE TO PROCEED
                     </motion.p>
                 )}
             </div>
 
             <button disabled={!product.is_available} onClick={handleAddToCart}
-                className={`w-full text-white text-3xl font-[1000] py-8 border-4 border-black shadow-brutal transition-all uppercase italic mb-10
+                className={`w-full text-white text-3xl font-[1000] py-8 border-4 border-black shadow-brutal transition-all uppercase italic mb-4
                     ${product.is_available ? 'bg-black hover:shadow-none hover:translate-x-2' : 'bg-gray-300 grayscale'}`}>
                 {product.is_available ? "Secure the Drip" : "STASH EMPTY"}
             </button>
+
+            {/* DYNAMIC ACCORDION (Size Chart & Materials) */}
+            <ProductAccordion product={product} />
+
+            {/* MINI TRUST BAR */}
+            <div className="grid grid-cols-3 gap-4 py-8 border-t-2 border-dashed border-gray-200 mt-4 opacity-50">
+               <div className="flex flex-col items-center"><Truck size={18}/><p className="text-[8px] font-black uppercase mt-1">FAST PAN-INDIA</p></div>
+               <div className="flex flex-col items-center"><RotateCcw size={18}/><p className="text-[8px] font-black uppercase mt-1">7-DAY SWAP</p></div>
+               <div className="flex flex-col items-center"><ShieldCheck size={18}/><p className="text-[8px] font-black uppercase mt-1">MASTER QUALITY</p></div>
+            </div>
           </div>
         </div>
 
-        {/* DYNAMIC VIDEO SECTION (Hidden if empty) */}
+        {/* THE REAL TEXTURE (Video Section) */}
         {videos.length > 0 && (
           <section className="mt-40 bg-black text-white py-24 border-y-8 border-black">
             <div className="max-w-7xl mx-auto px-6">
@@ -197,8 +203,8 @@ export default function ProductPage() {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 {videos.map((vUrl: string, idx: number) => (
-                  <div key={idx} className="border-8 border-white shadow-[15px_15px_0px_#FF5F1F] aspect-video bg-gray-900 overflow-hidden">
-                    <video src={vUrl} controls loop muted className="w-full h-full object-cover" />
+                  <div key={idx} className="border-8 border-white shadow-[15px_15px_0px_#FF5F1F] aspect-video bg-gray-900 overflow-hidden group">
+                    <video src={vUrl} controls loop muted className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                   </div>
                 ))}
               </div>
@@ -206,7 +212,7 @@ export default function ProductPage() {
           </section>
         )}
 
-        {/* DYNAMIC REVIEWS SECTION (Hidden if empty) */}
+        {/* HUNT REPORTS (Reviews) */}
         {reviews.length > 0 && (
           <section className="mt-40 max-w-7xl mx-auto px-6">
              <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
@@ -220,19 +226,18 @@ export default function ProductPage() {
 
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                {reviews.map((rev) => (
-                 <div key={rev.id} className="bg-white border-4 border-black p-8 shadow-brutal flex flex-col">
+                 <div key={rev.id} className="bg-white border-4 border-black p-8 shadow-brutal flex flex-col hover:translate-y-[-4px] transition-transform">
                     <div className="flex gap-1 mb-6">
-                      {[...Array(rev.rating)].map((_, i) => <Star key={i} size={20} fill="black" strokeWidth={0} />)}
+                      {[...Array(rev.rating)].map((_, i) => <Star key={i} size={18} fill="black" strokeWidth={0} />)}
                     </div>
                     
-                    <Quote className="text-gray-100 mb-[-20px] ml-[-10px]" size={40} />
-                    <p className="font-bold italic text-xl text-black relative z-10 leading-snug mb-8">
+                    <Quote className="text-gray-100 mb-[-20px] ml-[-10px] opacity-50" size={40} />
+                    <p className="font-bold italic text-xl text-black relative z-10 leading-tight mb-8">
                       "{rev.message}"
                     </p>
 
-                    {/* Review Screenshot/Media */}
                     {rev.media_urls?.[0] && (
-                      <div className="mt-auto mb-6 border-2 border-black rotate-1 overflow-hidden shadow-brutal-sm">
+                      <div className="mt-auto mb-6 border-2 border-black rotate-1 overflow-hidden shadow-brutal-sm bg-gray-100">
                         <img src={rev.media_urls[0]} className="w-full h-auto" alt="Review Proof" />
                       </div>
                     )}
@@ -242,8 +247,8 @@ export default function ProductPage() {
                         {rev.customer_name[0]}
                       </div>
                       <div>
-                        <p className="font-black uppercase text-xs italic">{rev.customer_name}</p>
-                        <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Verified Buyer</p>
+                        <p className="font-black uppercase text-[10px] italic">{rev.customer_name}</p>
+                        <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Verified Hunter</p>
                       </div>
                     </div>
                  </div>
