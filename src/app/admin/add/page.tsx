@@ -210,11 +210,23 @@ function AddProductForm() {
                     onChange={e => setFormData({...formData, tag: e.target.value})}
                     value={formData.tag}
                   >
-                      <option value="NEW DROP">NEW DROP</option>
-                      <option value="SELLING FAST">SELLING FAST (Urgency)</option>
-                      <option value="FINAL BATCH">FINAL BATCH (Scarcity)</option>
-                      <option value="MOST WANTED">MOST WANTED (Trust)</option>
-                      <option value="1:1 QUALITY">1:1 QUALITY (Best Choice)</option>
+                     {/* Freshness */}
+    <option value="NEW DROP">NEW DROP</option>
+    
+    {/* Urgency & Scarcity */}
+    <option value="SELLING FAST">SELLING FAST</option>
+    <option value="FINAL BATCH">FINAL BATCH</option>
+    
+    {/* Trust & Social Proof */}
+    <option value="MOST WANTED">MOST WANTED</option>
+    <option value="RESTOCKED">RESTOCKED</option>
+    
+    {/* Exclusivity & Curation */}
+    <option value="LIMITED EDITION">LIMITED EDITION</option>
+    <option value="STAFF PICK">STAFF PICK</option>
+    
+    {/* Quality Specific */}
+    <option value="1:1 QUALITY">1:1 QUALITY</option>
                   </select>
               </div>
 

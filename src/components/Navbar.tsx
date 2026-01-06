@@ -81,9 +81,9 @@ export default function Navbar() {
               <Image 
                 src="/logo.svg" 
                 alt="JUNGLI" 
-                width={200} 
-                height={45}
-                style={{ width: 'auto', height: '45px' }} 
+                width={300} 
+                height={50}
+                style={{ width: 'auto', height: '50px' }} 
                 priority 
               />
             </motion.div>

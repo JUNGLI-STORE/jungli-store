@@ -30,11 +30,23 @@ export default function ProductCard({
   // Dynamic Tag Styling based on text
   const getTagStyle = (tagName: string) => {
     const t = tagName.toUpperCase();
-    if (t.includes("FAST") || t.includes("FINAL")) return "bg-red-600 text-white animate-pulse";
-    if (t.includes("LIMITED")) return "bg-purple-600 text-white";
-    if (t.includes("BEST") || t.includes("WANTED")) return "bg-yellow-400 text-black";
-    if (t.includes("1:1") || t.includes("QUALITY")) return "bg-blue-600 text-white";
-    return "bg-jungli-orange text-white";
+    // Danger/Urgency - RED
+  if (t.includes("FAST") || t.includes("FINAL")) return "bg-red-600 text-white animate-pulse";
+  
+  // Exclusivity - PURPLE (Standard luxury color)
+  if (t.includes("LIMITED")) return "bg-purple-600 text-white";
+  
+  // Curation/Trust - YELLOW
+  if (t.includes("BEST") || t.includes("WANTED") || t.includes("PICK")) return "bg-yellow-400 text-black";
+  
+  // Popularity - BLACK
+  if (t.includes("RESTOCKED")) return "bg-black text-white";
+  
+  // Quality - BLUE
+  if (t.includes("1:1") || t.includes("QUALITY")) return "bg-blue-600 text-white";
+  
+  // Default - ORANGE
+  return "bg-jungli-orange text-white";
   };
 
   return (
