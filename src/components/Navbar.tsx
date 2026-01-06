@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ShoppingBag, Search, User, X, Package, MapPin, LogOut, ChevronRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion'; // Added scroll hooks
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
@@ -13,6 +13,20 @@ export default function Navbar() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   
+  // 1. SCROLL STATES
+  const { scrollY } = useScroll();
+  const [hidden, setHidden] = useState(false);
+  
+  // 2. LOGIC TO HIDE/SHOW ON SCROLL
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    const previous = scrollY.getPrevious() ?? 0;
+    if (latest > previous && latest > 150) {
+      setHidden(true); // Scrolling down - Hide
+    } else {
+      setHidden(false); // Scrolling up - Show
+    }
+  });
+
   // UI States
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -43,7 +57,16 @@ export default function Navbar() {
   const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
 
   return (
-    <header className="sticky top-0 z-[100]">
+    // 3. ANIMATED WRAPPER
+    <motion.header 
+      variants={{
+        visible: { y: 0 },
+        hidden: { y: "-100%" },
+      }}
+      animate={hidden ? "hidden" : "visible"}
+      transition={{ duration: 0.35, ease: "easeInOut" }}
+      className="sticky top-0 z-[100] w-full"
+    >
       {/* MAIN NAVBAR */}
       <nav className="relative z-[110] bg-white border-b-4 border-black px-4 md:px-8 py-4 flex justify-between items-center shadow-brutal-sm">
         {/* Brand Logo */}
@@ -75,11 +98,10 @@ export default function Navbar() {
             onClick={() => { setIsSearchOpen(!isSearchOpen); setIsProfileOpen(false); }}
           />
           
-          {/* PROFILE DROPDOWN TRIGGER */}
           <div className="relative">
             <User 
               size={22} 
-              className={`cursor-pointer transition-colors ${user ? 'text-jungli-orange fill-jungli-orange/10' : 'text-black hover:text-jungli-orange'}`} 
+              className={`cursor-pointer transition-colors ${user ? 'text-jungli-orange fill-jungli-orange/20' : 'text-black hover:text-jungli-orange'}`} 
               onClick={() => {
                 if(!user) router.push('/login');
                 else setIsProfileOpen(!isProfileOpen);
@@ -87,7 +109,6 @@ export default function Navbar() {
               }}
             />
 
-            {/* AUTHENTIC PROFILE MENU */}
             <AnimatePresence>
               {isProfileOpen && user && (
                 <motion.div 
@@ -106,10 +127,6 @@ export default function Navbar() {
                       <div className="flex items-center gap-3"><Package size={18} /> My Stash</div>
                       <ChevronRight size={14} />
                     </Link>
-                    <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center justify-between p-3 font-[1000] uppercase italic text-sm hover:bg-yellow-400 border-2 border-transparent hover:border-black transition-all">
-                      <div className="flex items-center gap-3"><MapPin size={18} /> Delivery Intel</div>
-                      <ChevronRight size={14} />
-                    </Link>
                   </div>
                   
                   <button 
@@ -123,7 +140,6 @@ export default function Navbar() {
             </AnimatePresence>
           </div>
           
-          {/* CART ICON */}
           <div 
             onClick={() => setIsCartOpen(true)}
             className="relative cursor-pointer bg-jungli-orange border-2 border-black p-2 shadow-brutal-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all group"
@@ -143,39 +159,65 @@ export default function Navbar() {
 
       {/* SLIDE-DOWN SEARCH BAR */}
       <AnimatePresence>
-        {isSearchOpen && (
-          <motion.div 
-            initial={{ y: -100 }}
-            animate={{ y: 0 }}
-            exit={{ y: -100 }}
-            transition={{ type: "spring", damping: 20, stiffness: 150 }}
-            className="absolute top-full left-0 w-full bg-white border-b-8 border-black p-6 z-[100] shadow-brutal"
-          >
-            <form onSubmit={handleSearch} className="max-w-4xl mx-auto relative group">
-              <div className="absolute inset-0 bg-black translate-x-2 translate-y-2"></div>
-              <div className="relative flex items-center bg-white border-4 border-black p-2">
-                <Search className="ml-4 text-black" size={30} />
-                <input 
-                  autoFocus
-                  type="text" 
-                  placeholder="HUNT FOR DRIP..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full p-4 font-[1000] uppercase italic text-3xl md:text-5xl outline-none placeholder:text-gray-200"
-                />
+  {isSearchOpen && (
+    <>
+      {/* 1. Backdrop (Blurs the site behind for a premium feel) */}
+      {/* <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={() => setIsSearchOpen(false)}
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[90]"
+      /> */}
+      
+      {/* 2. The Search Bar Overlay - Now Slimmer & Sleek */}
+      <motion.div 
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: -50, opacity: 0 }}
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        className="absolute top-full left-0 w-full bg-white border-b-4 border-black p-4 z-[100] shadow-[0_10px_0_0_#000]"
+      >
+        <form onSubmit={handleSearch} className="max-w-5xl mx-auto flex items-center gap-4">
+          <div className="relative flex-1 group">
+            {/* The thin comic shadow */}
+            <div className="absolute inset-0 bg-black translate-x-1 translate-y-1 transition-transform group-focus-within:translate-x-0 group-focus-within:translate-y-0"></div>
+            
+            <div className="relative flex items-center bg-white border-2 border-black px-4 py-2">
+              <Search className="text-black/30 group-focus-within:text-jungli-orange transition-colors" size={20} />
+              <input 
+                autoFocus
+                type="text" 
+                placeholder="HUNT FOR DRIP..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-1 font-bold uppercase italic text-lg md:text-2xl outline-none placeholder:text-gray-200"
+              />
+              {searchQuery && (
                 <button 
                   type="button"
-                  onClick={() => {setSearchQuery(""); setIsSearchOpen(false)}}
-                  className="p-2 border-4 border-black hover:bg-black hover:text-white transition-all mr-2"
+                  onClick={() => setSearchQuery("")}
+                  className="p-1 hover:bg-gray-100 transition-colors"
                 >
-                  <X size={30} />
+                  <X size={18} className="text-gray-400" />
                 </button>
-              </div>
-              <p className="mt-4 text-[10px] font-black uppercase italic text-gray-400">Press Enter to See All Results</p>
-            </form>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </header>
+              )}
+            </div>
+          </div>
+          
+          {/* Minimalist Close Button */}
+          <button 
+            type="button"
+            onClick={() => setIsSearchOpen(false)}
+            className="p-2 border-2 border-black hover:bg-black hover:text-white transition-all active:scale-90"
+          >
+            <X size={24} />
+          </button>
+        </form>
+      </motion.div>
+    </>
+  )}
+</AnimatePresence>
+    </motion.header>
   );
 }

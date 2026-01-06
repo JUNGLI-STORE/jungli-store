@@ -2,11 +2,10 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 
 // Components
-import Navbar from '@/components/Navbar';
 import ProductCard from '@/components/ProductCard';
 import FilterDrawer from '@/components/FilterDrawer';
 import SortDrawer from '@/components/SortDrawer';
@@ -20,27 +19,33 @@ function HomeContent() {
   const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 2. UI STATES (Drawers)
+  // 2. UI STATES
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
+  const [isNavbarHidden, setIsNavbarHidden] = useState(false);
 
   // 3. LOGIC STATES
   const [activeSort, setActiveSort] = useState("featured");
   const [filters, setFilters] = useState({
-    minPrice: "",
-    maxPrice: "",
-    size: "",
-    category: "All"
+    minPrice: "", maxPrice: "", size: "", category: "All"
   });
 
-  // FETCH PRODUCTS FROM SUPABASE
+  // SYNC WITH NAVBAR SCROLL (Dynamic Sticky Position)
+  const { scrollY } = useScroll();
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    const previous = scrollY.getPrevious() ?? 0;
+    // If scrolling down and past the hero, hide the navbar gap
+    if (latest > previous && latest > 150) setIsNavbarHidden(true);
+    else setIsNavbarHidden(false);
+  });
+
+  // FETCH ALL PRODUCTS (Including out of stock)
   useEffect(() => {
     async function fetchProducts() {
       try {
         const { data, error } = await supabase
           .from('products')
           .select('*')
-          .eq('is_available', true) // Only show available items
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -49,7 +54,7 @@ function HomeContent() {
           setFilteredProducts(data);
         }
       } catch (err) {
-        console.error("Error fetching products:", err);
+        console.error("Supabase Error:", err);
       } finally {
         setLoading(false);
       }
@@ -57,11 +62,11 @@ function HomeContent() {
     fetchProducts();
   }, []);
 
-  // MASTER FILTER & SORT ENGINE
+  // MASTER FILTER ENGINE
   useEffect(() => {
     let result = [...products];
 
-    // Search Filter
+    // Search (Name or Brand)
     if (urlSearch) {
       result = result.filter(p => 
         p.name.toLowerCase().includes(urlSearch.toLowerCase()) ||
@@ -69,37 +74,25 @@ function HomeContent() {
       );
     }
 
-    // Category Filter
+    // Category
     if (filters.category !== "All") {
       result = result.filter(p => p.tag === filters.category);
     }
 
-    // Size Filter (Checks if the selected size is in the product's array)
+    // Size (Checks array in DB)
     if (filters.size) {
       result = result.filter(p => p.available_sizes?.includes(filters.size));
     }
 
-    // Price Filter
-    if (filters.minPrice) {
-      result = result.filter(p => p.jungli_price >= Number(filters.minPrice));
-    }
-    if (filters.maxPrice) {
-      result = result.filter(p => p.jungli_price <= Number(filters.maxPrice));
-    }
+    // Price
+    if (filters.minPrice) result = result.filter(p => p.jungli_price >= Number(filters.minPrice));
+    if (filters.maxPrice) result = result.filter(p => p.jungli_price <= Number(filters.maxPrice));
 
-    // Sorting Logic
+    // Sort
     switch (activeSort) {
-      case "price-low":
-        result.sort((a, b) => a.jungli_price - b.jungli_price);
-        break;
-      case "price-high":
-        result.sort((a, b) => b.jungli_price - a.jungli_price);
-        break;
-      case "newest":
-        result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        break;
-      default:
-        break;
+      case "price-low": result.sort((a, b) => a.jungli_price - b.jungli_price); break;
+      case "price-high": result.sort((a, b) => b.jungli_price - a.jungli_price); break;
+      case "newest": result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); break;
     }
 
     setFilteredProducts(result);
@@ -107,8 +100,7 @@ function HomeContent() {
 
   return (
     <>
-      <Navbar />
-      
+      {/* DRAWERS (Layered above main) */}
       <FilterDrawer 
         isOpen={isFilterOpen} 
         onClose={() => setIsFilterOpen(false)} 
@@ -126,17 +118,17 @@ function HomeContent() {
         
         {/* HERO SECTION */}
         <section className="bg-jungli-green text-white py-20 px-6 relative overflow-hidden sawtooth">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12">
-            <motion.div initial={{ x: -50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 text-center md:text-left">
-              <span className="bg-jungli-orange text-white font-black px-4 py-1 border-2 border-black mb-4 inline-block uppercase italic shadow-brutal-sm">
-                Premium Performance. Street Prices.
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12 text-center md:text-left">
+            <motion.div initial={{ x: -50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1">
+              <span className="bg-jungli-orange text-white font-black px-4 py-1 border-2 border-black mb-4 inline-block uppercase italic shadow-brutal-sm text-xs">
+                India's No. 1 Smart Choice.
               </span>
               <h1 className="text-6xl md:text-8xl font-[1000] uppercase italic leading-[0.85] tracking-tighter">
-                UNLEASH THE<br/>
-                <span className="text-jungli-orange bg-white px-2 text-black border-4 border-black inline-block mt-2">JUNGLI.</span>
+                THE 20K LOOK.<br/>
+                <span className="text-jungli-orange bg-white px-2 text-black border-4 border-black inline-block mt-2">3K PRICE.</span>
               </h1>
-              <p className="mt-8 text-xl font-bold max-w-lg italic opacity-80 mx-auto md:mx-0 uppercase">
-                Master-quality craftsmanship. zero markups. secured stash.
+              <p className="mt-8 text-xl font-bold max-w-lg italic opacity-80 mx-auto md:mx-0 uppercase tracking-tight">
+                Premium quality sneakers. built for the streets.
               </p>
             </motion.div>
 
@@ -146,100 +138,117 @@ function HomeContent() {
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                 className="bg-white border-8 border-black p-4 rotate-3 shadow-brutal w-72 h-72 md:w-96 md:h-96 flex items-center justify-center relative overflow-hidden group"
               >
-                {/* Visual placeholder for the "Bred" vibe */}
                 <div className="absolute inset-0 bg-jungli-orange opacity-10 group-hover:opacity-20 transition-opacity" />
                 <p className="text-black font-[1000] text-center uppercase italic text-5xl md:text-7xl z-10 leading-none">
                   JOIN THE<br/>HUNT
                 </p>
-                <div className="absolute -bottom-4 -right-4 bg-black text-white p-4 font-black rotate-12 border-4 border-white">₹2,999</div>
+                <div className="absolute -bottom-4 -right-4 bg-black text-white p-4 font-black rotate-12 border-4 border-white shadow-brutal-sm text-xl italic uppercase">
+                    ₹2,999
+                </div>
               </motion.div>
             </div>
           </div>
         </section>
 
-        {/* STICKY ACTION BAR */}
-        <div className="sticky top-[75px] z-40 bg-white border-y-4 border-black py-4 px-6 shadow-brutal-sm">
-          <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <button 
-              onClick={() => setIsFilterOpen(true)}
-              className="bg-white border-4 border-black px-8 md:px-12 py-2 rounded-full font-[1000] uppercase italic shadow-brutal-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
-            >
-              FILTER {filters.size && `(${filters.size})`}
-            </button>
-            
-            <div className="hidden md:flex flex-col items-center">
-               <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest leading-none">Scanning Stash</p>
-               <span className="font-black uppercase italic text-black">{filteredProducts.length} PAIRS FOUND</span>
+        {/* PRODUCT SECTION WITH STICKY BOUNDARY */}
+        <section className="relative">
+          
+          {/* STICKY ACTION BAR */}
+          <div 
+            style={{ top: isNavbarHidden ? '0px' : '75px' }} 
+            className="sticky z-40 bg-white/95 backdrop-blur-md border-y-4 border-black py-4 px-6 shadow-brutal-sm transition-all duration-300"
+          >
+            <div className="max-w-7xl mx-auto flex justify-between items-center">
+              <button 
+                onClick={() => setIsFilterOpen(true)}
+                className="bg-white border-4 border-black px-6 md:px-12 py-2 rounded-full font-[1000] uppercase italic shadow-brutal-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all text-xs md:text-base"
+              >
+                FILTER {filters.size && `(${filters.size})`}
+              </button>
+              
+              <div className="hidden md:flex flex-col items-center">
+                 <span className="font-black uppercase italic text-black tracking-tighter">
+                   {filteredProducts.length} PAIRS DETECTED
+                 </span>
+              </div>
+
+              <button 
+                onClick={() => setIsSortOpen(true)}
+                className="bg-white border-4 border-black px-6 md:px-12 py-2 rounded-full font-[1000] uppercase italic shadow-brutal-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all text-xs md:text-base"
+              >
+                SORT
+              </button>
+            </div>
+          </div>
+
+          {/* PRODUCT GRID */}
+          <div id="drops" className="py-20 px-6 max-w-7xl mx-auto min-h-[50vh]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+              {loading ? (
+                [1, 2, 3, 4].map((i) => (
+                  <div key={i} className="animate-pulse bg-gray-200 border-4 border-black aspect-[4/5] shadow-brutal-sm" />
+                ))
+              ) : (
+                <AnimatePresence mode="popLayout">
+                  {filteredProducts.map((product) => (
+                    <ProductCard 
+                      key={product.id}
+                      id={product.id}
+                      brand={product.brand}
+                      name={product.name}
+                      luxuryPrice={product.luxury_price}
+                      jungliPrice={product.jungli_price}
+                      tag={product.tag}
+                      image={product.image_url}
+                      is_available={product.is_available} 
+                    />
+                  ))}
+                </AnimatePresence>
+              )}
             </div>
 
-            <button 
-              onClick={() => setIsSortOpen(true)}
-              className="bg-white border-4 border-black px-8 md:px-12 py-2 rounded-full font-[1000] uppercase italic shadow-brutal-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
-            >
-              SORT
-            </button>
-          </div>
-        </div>
-
-        {/* PRODUCT GRID */}
-        <section id="drops" className="py-20 px-6 max-w-7xl mx-auto min-h-screen">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-            {loading ? (
-              [1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className="animate-pulse bg-gray-200 border-4 border-black aspect-[4/5] shadow-brutal-sm" />
-              ))
-            ) : (
-              <AnimatePresence mode="popLayout">
-                {filteredProducts.map((product) => (
-                  <ProductCard 
-                    key={product.id}
-                    id={product.id}
-                    brand={product.brand} // Pass Brand
-                    name={product.name}
-                    luxuryPrice={product.luxury_price}
-                    jungliPrice={product.jungli_price}
-                    tag={product.tag}
-                    image={product.image_url}
-                  />
-                ))}
-              </AnimatePresence>
+            {/* EMPTY STATE */}
+            {!loading && filteredProducts.length === 0 && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-40">
+                <h2 className="text-5xl font-[1000] uppercase italic text-gray-300">STASH DEPLETED</h2>
+                <button 
+                  onClick={() => {
+                    setFilters({minPrice: "", maxPrice: "", size: "", category: "All"});
+                    window.history.pushState({}, '', '/');
+                    window.location.reload(); // Hard reset
+                  }}
+                  className="mt-8 text-jungli-orange font-black underline uppercase italic text-xl decoration-4 underline-offset-8"
+                >
+                  Clear All Intel
+                </button>
+              </motion.div>
             )}
           </div>
-
-          {!loading && filteredProducts.length === 0 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-40">
-              <h2 className="text-5xl font-[1000] uppercase italic text-gray-300">NO DRIP DETECTED</h2>
-              <button 
-                onClick={() => {
-                  setFilters({minPrice: "", maxPrice: "", size: "", category: "All"});
-                  window.location.href = "/";
-                }}
-                className="mt-6 text-jungli-orange font-black underline uppercase italic"
-              >
-                Wipe All Filters
-              </button>
-            </motion.div>
-          )}
         </section>
 
-        {/* MARQUEE FOOTER */}
-        <footer className="bg-black text-white py-16 border-t-8 border-jungli-orange overflow-hidden">
+        {/* HYPE MARQUEE (Always visible above footer) */}
+        <section className="relative z-50 bg-black text-white py-12 border-y-8 border-jungli-orange overflow-hidden">
           <div className="flex animate-marquee whitespace-nowrap gap-12">
             {[...Array(10)].map((_, i) => (
               <span key={i} className="text-5xl font-[1000] uppercase italic tracking-tighter">
-                Premium Performance ★ Pan-India Shipping ★ High-Density Quality ★ 
+                Premium Performance ★ Pan-India Shipping ★ Secure Stash ★ 
               </span>
             ))}
           </div>
-        </footer>
+        </section>
       </main>
     </>
   );
 }
 
+// THE ROOT WITH SUSPENSE
 export default function Home() {
   return (
-    <Suspense fallback={<div className="font-black p-20 text-center uppercase italic">Waking up the jungle...</div>}>
+    <Suspense fallback={
+        <div className="min-h-screen bg-white flex items-center justify-center font-[1000] uppercase italic text-gray-200 text-4xl animate-pulse">
+            Booting System...
+        </div>
+    }>
       <HomeContent />
     </Suspense>
   );

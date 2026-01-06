@@ -41,3 +41,11 @@ body {
   width: max-content;
   animation: marquee 20s linear infinite;
 }
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: black;
+  border-radius: 10px;
+}

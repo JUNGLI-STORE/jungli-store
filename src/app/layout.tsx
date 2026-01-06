@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { CartProvider } from "@/context/CartContext";
+import Navbar from "@/components/Navbar"; // Ensure Navbar is imported
 import CartSidebar from "@/components/CartSidebar";
+import PreLoader from "@/components/PreLoader";
+import Footer from "@/components/Footer";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,9 +18,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Professional SEO Metadata
 export const metadata: Metadata = {
   title: "JUNGLI | Luxury Kicks, Street Prices",
   description: "India's wildest sneaker drops. Master-quality silhouettes for under ₹3,999. Born of Fire.",
+  icons: {
+    icon: "/logo.svg", // This uses your logo as the browser tab icon
+  }
 };
 
 export default function RootLayout({
@@ -30,12 +38,25 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        {/* Wrap children with CartProvider so every page can access the cart */}
+        {/* The CartProvider allows every component to see what's in the bag */}
         <CartProvider>
-          {children}
           
-          {/* Place CartSidebar here so it can slide out on any page */}
+          {/* 1. The Intro Animation Layer */}
+          <PreLoader /> 
+
+          {/* 2. The Navigation Layer (Sticky) */}
+          <Navbar />
+
+          {/* 3. The Main Content (Home Page, Product Pages, etc.) */}
+          {children}
+
+          {/* 4. The Global Trust Layer */}
+          <Footer />
+
+          {/* 5. The Functional Drawers & Buttons (Floating Layers) */}
           <CartSidebar />
+          
+
         </CartProvider>
       </body>
     </html>
