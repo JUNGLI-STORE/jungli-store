@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
-import { Instagram, Phone, User, Users, CheckCircle, Zap, ShieldCheck, CreditCard } from "lucide-react";
+import { Instagram, Phone, User, Users, CheckCircle, Zap, ShieldCheck, CreditCard, Loader2 } from "lucide-react";
 
 export default function JoinTheHunt() {
   const [loading, setLoading] = useState(false);
