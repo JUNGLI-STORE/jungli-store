@@ -16,46 +16,54 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function fetchData() {
-      // 1. Get Session
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/login");
-        return;
+      try {
+        // 1. Get Session
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!authUser) {
+          router.push("/login");
+          return;
+        }
+        setUser(authUser);
+
+        // 2. Fetch Profile Details (Cleaned up logic)
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authUser.id)
+          .maybeSingle(); // Prevents crashing if profile doesn't exist yet
+
+        if (profileData) {
+          setProfile(profileData);
+        } else {
+          // Default values if profile is missing
+          setProfile({ 
+            username: authUser.email?.split('@')[0] || "hunter", 
+            full_name: "" 
+          });
+        }
+
+        // 3. Fetch Orders
+        const { data: orderData } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('email', authUser.email) 
+          .order('created_at', { ascending: false });
+
+        if (orderData) setOrders(orderData);
+      } catch (err) {
+        console.error("System Error:", err);
+      } finally {
+        setLoading(false);
       }
-      setUser(user);
-
-      // 2. Fetch Profile Details
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        if (user?.id) {
-  const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-}
-        .single();
-
-      if (profileData) {
-        setProfile(profileData);
-      } else {
-        // Create initial profile if it doesn't exist
-        setProfile({ username: user.email?.split('@')[0], full_name: "" });
-      }
-
-      // 3. Fetch Orders
-      const { data: orderData } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('email', user.email) 
-        .order('created_at', { ascending: false });
-
-      if (orderData) setOrders(orderData);
-      setLoading(false);
     }
 
     fetchData();
   }, [router]);
 
   const handleUpdateProfile = async () => {
+    if (!user) return;
     setSaving(true);
+    
     const { error } = await supabase
       .from('profiles')
       .upsert({
@@ -66,9 +74,9 @@ export default function ProfilePage() {
       });
 
     if (error) {
-      alert("ERROR: Username might be taken!");
+      alert("ERROR: Handle might be taken or invalid!");
     } else {
-      alert("IDENTITY UPDATED ⚡️");
+      alert("IDENTITY SECURED ⚡️");
     }
     setSaving(false);
   };
@@ -82,7 +90,7 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white">
         <Loader2 className="animate-spin text-jungli-orange mb-4" size={40} />
-        <p className="font-[1000] uppercase italic tracking-widest text-gray-300 text-xl">Scanning Stash...</p>
+        <p className="font-[1000] uppercase italic tracking-tighter text-gray-300 text-2xl animate-pulse">Syncing Stash...</p>
       </div>
     );
   }
@@ -95,13 +103,13 @@ export default function ProfilePage() {
         <div className="bg-white border-8 border-black p-6 md:p-10 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] mb-12 flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-6">
             <div className="w-20 h-20 md:w-28 md:h-28 bg-jungli-orange border-4 border-black rounded-full flex items-center justify-center text-white font-[1000] text-4xl italic shadow-brutal-sm">
-                {profile.username?.[0]?.toUpperCase() || user?.email?.[0].toUpperCase()}
+                {profile?.username?.[0]?.toUpperCase() || user?.email?.[0].toUpperCase()}
             </div>
             <div>
               <h1 className="text-3xl md:text-5xl font-[1000] uppercase italic tracking-tighter text-black leading-none mb-2">
-                {profile.full_name || "STASH HUNTER"}
+                {profile?.full_name || "STASH HUNTER"}
               </h1>
-              <p className="font-bold text-gray-400 uppercase text-xs italic tracking-widest">@{profile.username || "hunter"}</p>
+              <p className="font-bold text-gray-400 uppercase text-xs italic tracking-widest lowercase">@{profile?.username || "hunter"}</p>
             </div>
           </div>
           
@@ -150,9 +158,9 @@ export default function ProfilePage() {
                     <h3 className="text-4xl font-[1000] uppercase italic tracking-tighter text-black mb-10 border-b-8 border-black pb-4">ORDER TRACKING</h3>
                     
                     {orders.length === 0 ? (
-                      <div className="text-center py-20">
+                      <div className="text-center py-24 bg-gray-50 border-4 border-dashed border-gray-200">
                         <ShoppingBag size={64} className="mx-auto text-gray-200 mb-4" />
-                        <p className="text-2xl font-[1000] text-gray-300 uppercase italic">Nothing Secured Yet</p>
+                        <p className="text-2xl font-[1000] text-gray-300 uppercase italic">Vault is empty</p>
                       </div>
                     ) : (
                       <div className="space-y-8">
@@ -166,15 +174,15 @@ export default function ProfilePage() {
                                     </span>
                                     <p className="text-[10px] font-bold text-gray-400 uppercase italic">#{order.payment_id?.slice(-8)}</p>
                                 </div>
-                                <h4 className="text-2xl font-[1000] uppercase italic leading-none mb-6">₹{order.total_amount.toLocaleString()}</h4>
+                                <h4 className="text-2xl font-[1000] uppercase italic leading-none mb-6 text-black tracking-tighter">₹{order.total_amount.toLocaleString()}</h4>
                                 
                                 {/* TRACKING VISUALIZER */}
                                 <div className="flex items-center gap-2 max-w-xs">
                                     <div className="h-4 w-4 rounded-full border-2 border-black bg-black" />
                                     <div className="h-1 flex-1 bg-black" />
-                                    <div className={`h-4 w-4 rounded-full border-2 border-black ${order.status !== 'paid' ? 'bg-black' : 'bg-gray-200'}`} />
-                                    <div className={`h-1 flex-1 ${order.status === 'delivered' ? 'bg-black' : 'bg-gray-200'}`} />
-                                    <div className={`h-4 w-4 rounded-full border-2 border-black ${order.status === 'delivered' ? 'bg-black' : 'bg-gray-200'}`} />
+                                    <div className={`h-4 w-4 rounded-full border-2 border-black ${order.status !== 'paid' ? 'bg-black' : 'bg-gray-100'}`} />
+                                    <div className={`h-1 flex-1 ${order.status === 'delivered' ? 'bg-black' : 'bg-gray-100'}`} />
+                                    <div className={`h-4 w-4 rounded-full border-2 border-black ${order.status === 'delivered' ? 'bg-black' : 'bg-gray-100'}`} />
                                 </div>
                                 <div className="flex justify-between max-w-xs mt-2 text-[8px] font-black uppercase italic text-gray-500">
                                     <span>Verified</span>
@@ -224,7 +232,7 @@ export default function ProfilePage() {
                         <button 
                             onClick={handleUpdateProfile}
                             disabled={saving}
-                            className="w-full bg-black text-white py-6 border-4 border-black font-[1000] uppercase italic text-2xl shadow-brutal hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-4"
+                            className="w-full bg-black text-white py-6 border-4 border-black font-[1000] uppercase italic text-2xl shadow-brutal hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-4 disabled:opacity-50"
                         >
                             {saving ? <Loader2 className="animate-spin" /> : <><Save size={24} /> Update Identity</>}
                         </button>
