@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShoppingBag, Search, User, X, Package, MapPin, LogOut, ChevronRight } from 'lucide-react';
-import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion'; // Added scroll hooks
+import { ShoppingBag, Search, User, X, Package, LogOut, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
@@ -57,7 +57,6 @@ export default function Navbar() {
   const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
 
   return (
-    // 3. ANIMATED WRAPPER
     <motion.header 
       variants={{
         visible: { y: 0 },
@@ -67,31 +66,32 @@ export default function Navbar() {
       transition={{ duration: 0.35, ease: "easeInOut" }}
       className="sticky top-0 z-[100] w-full"
     >
-      {/* MAIN NAVBAR */}
-      <nav className="relative z-[110] bg-white border-b-4 border-black px-4 md:px-8 py-4 flex justify-between items-center shadow-brutal-sm">
-        {/* Brand Logo */}
-        <Link href="/">
-          <motion.div whileHover={{ scale: 1.05, rotate: -2 }} className="cursor-pointer">
-            <Image 
-              src="/logo.svg" 
-              alt="JUNGLI" 
-              width={140} 
-              height={35}
-              style={{ width: 'auto', height: '35px' }} 
-              priority 
-            />
-          </motion.div>
-        </Link>
-
-        {/* Desktop Nav Links */}
-        <div className="hidden md:flex gap-8 font-[1000] uppercase italic tracking-tighter text-sm">
-          <Link href="/" className="hover:text-jungli-orange transition-colors">Drops</Link>
-          <Link href="/" className="hover:text-jungli-orange transition-colors">Best Sellers</Link>
-          <Link href="/" className="hover:text-jungli-orange transition-colors">The Vision</Link>
+      {/* MAIN NAVBAR - Using grid-cols-3 to force logo to the center */}
+      <nav className="relative z-[110] bg-white border-b-4 border-black px-4 md:px-8 py-4 grid grid-cols-3 items-center shadow-brutal-sm">
+        
+        {/* LEFT COLUMN: Empty space (or menu icon if needed later) */}
+        <div className="flex justify-start">
+           {/* Placeholder to balance the centered logo */}
         </div>
 
-        {/* Icons Area */}
-        <div className="flex items-center gap-4 md:gap-6">
+        {/* MIDDLE COLUMN: Centered Brand Logo */}
+        <div className="flex justify-center">
+          <Link href="/">
+            <motion.div whileHover={{ scale: 1.05, rotate: -2 }} className="cursor-pointer">
+              <Image 
+                src="/logo.svg" 
+                alt="JUNGLI" 
+                width={150} 
+                height={35}
+                style={{ width: 'auto', height: '35px' }} 
+                priority 
+              />
+            </motion.div>
+          </Link>
+        </div>
+
+        {/* RIGHT COLUMN: Icons Area */}
+        <div className="flex items-center justify-end gap-3 md:gap-6">
           <Search 
             size={22} 
             className={`cursor-pointer transition-colors hover:text-jungli-orange ${isSearchOpen ? 'text-jungli-orange' : 'text-black'}`} 
@@ -101,7 +101,7 @@ export default function Navbar() {
           <div className="relative">
             <User 
               size={22} 
-              className={`cursor-pointer transition-colors ${user ? 'text-jungli-orange fill-jungli-orange/20' : 'text-black hover:text-jungli-orange'}`} 
+              className={`cursor-pointer transition-colors ${user ? 'text-jungli-orange' : 'text-black hover:text-jungli-orange'}`} 
               onClick={() => {
                 if(!user) router.push('/login');
                 else setIsProfileOpen(!isProfileOpen);
@@ -159,65 +159,50 @@ export default function Navbar() {
 
       {/* SLIDE-DOWN SEARCH BAR */}
       <AnimatePresence>
-  {isSearchOpen && (
-    <>
-      {/* 1. Backdrop (Blurs the site behind for a premium feel) */}
-      {/* <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={() => setIsSearchOpen(false)}
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[90]"
-      /> */}
-      
-      {/* 2. The Search Bar Overlay - Now Slimmer & Sleek */}
-      <motion.div 
-        initial={{ y: -50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: -50, opacity: 0 }}
-        transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="absolute top-full left-0 w-full bg-white border-b-4 border-black p-4 z-[100] shadow-[0_10px_0_0_#000]"
-      >
-        <form onSubmit={handleSearch} className="max-w-5xl mx-auto flex items-center gap-4">
-          <div className="relative flex-1 group">
-            {/* The thin comic shadow */}
-            <div className="absolute inset-0 bg-black translate-x-1 translate-y-1 transition-transform group-focus-within:translate-x-0 group-focus-within:translate-y-0"></div>
-            
-            <div className="relative flex items-center bg-white border-2 border-black px-4 py-2">
-              <Search className="text-black/30 group-focus-within:text-jungli-orange transition-colors" size={20} />
-              <input 
-                autoFocus
-                type="text" 
-                placeholder="HUNT FOR DRIP..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-1 font-bold uppercase italic text-lg md:text-2xl outline-none placeholder:text-gray-200"
-              />
-              {searchQuery && (
-                <button 
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="p-1 hover:bg-gray-100 transition-colors"
-                >
-                  <X size={18} className="text-gray-400" />
-                </button>
-              )}
-            </div>
-          </div>
-          
-          {/* Minimalist Close Button */}
-          <button 
-            type="button"
-            onClick={() => setIsSearchOpen(false)}
-            className="p-2 border-2 border-black hover:bg-black hover:text-white transition-all active:scale-90"
+        {isSearchOpen && (
+          <motion.div 
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -50, opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="absolute top-full left-0 w-full bg-white border-b-4 border-black p-4 z-[100] shadow-[0_10px_0_0_#000]"
           >
-            <X size={24} />
-          </button>
-        </form>
-      </motion.div>
-    </>
-  )}
-</AnimatePresence>
+            <form onSubmit={handleSearch} className="max-w-5xl mx-auto flex items-center gap-4">
+              <div className="relative flex-1 group">
+                <div className="absolute inset-0 bg-black translate-x-1 translate-y-1 transition-transform group-focus-within:translate-x-0 group-focus-within:translate-y-0"></div>
+                <div className="relative flex items-center bg-white border-2 border-black px-4 py-2">
+                  <Search className="text-black/30 group-focus-within:text-jungli-orange transition-colors" size={20} />
+                  <input 
+                    autoFocus
+                    type="text" 
+                    placeholder="HUNT FOR DRIP..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-4 py-1 font-bold uppercase italic text-lg md:text-2xl outline-none placeholder:text-gray-200"
+                  />
+                  {searchQuery && (
+                    <button 
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="p-1 hover:bg-gray-100 transition-colors"
+                    >
+                      <X size={18} className="text-gray-400" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              <button 
+                type="button"
+                onClick={() => setIsSearchOpen(false)}
+                className="p-2 border-2 border-black hover:bg-black hover:text-white transition-all active:scale-90"
+              >
+                <X size={24} />
+              </button>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.header>
   );
 }

@@ -30,16 +30,13 @@ function HomeContent() {
     minPrice: "", maxPrice: "", size: "", category: "All"
   });
 
-  // SYNC WITH NAVBAR SCROLL (Dynamic Sticky Position)
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (latest) => {
     const previous = scrollY.getPrevious() ?? 0;
-    // If scrolling down and past the hero, hide the navbar gap
     if (latest > previous && latest > 150) setIsNavbarHidden(true);
     else setIsNavbarHidden(false);
   });
 
-  // FETCH ALL PRODUCTS (Including out of stock)
   useEffect(() => {
     async function fetchProducts() {
       try {
@@ -62,57 +59,76 @@ function HomeContent() {
     fetchProducts();
   }, []);
 
-  // MASTER FILTER ENGINE
+  // MASTER HYPE & WEAVING ENGINE
   useEffect(() => {
     let result = [...products];
 
-    // Search (Name or Brand)
+    // Basic Filters
     if (urlSearch) {
       result = result.filter(p => 
         p.name.toLowerCase().includes(urlSearch.toLowerCase()) ||
         p.brand?.toLowerCase().includes(urlSearch.toLowerCase())
       );
     }
-
-    // Category
-    if (filters.category !== "All") {
-      result = result.filter(p => p.tag === filters.category);
-    }
-
-    // Size (Checks array in DB)
-    if (filters.size) {
-      result = result.filter(p => p.available_sizes?.includes(filters.size));
-    }
-
-    // Price
+    if (filters.category !== "All") result = result.filter(p => p.tag === filters.category);
+    if (filters.size) result = result.filter(p => p.available_sizes?.includes(filters.size));
     if (filters.minPrice) result = result.filter(p => p.jungli_price >= Number(filters.minPrice));
     if (filters.maxPrice) result = result.filter(p => p.jungli_price <= Number(filters.maxPrice));
 
-    // Sort
-    switch (activeSort) {
-      case "price-low": result.sort((a, b) => a.jungli_price - b.jungli_price); break;
-      case "price-high": result.sort((a, b) => b.jungli_price - a.jungli_price); break;
-      case "newest": result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); break;
-    }
+    // FEATURED / HYPE SORTING LOGIC
+    if (activeSort === "featured") {
+      // 1. Bucket A: High Hype + In Stock (Selling Fast, Limited, Best Seller)
+      const highHype = result.filter(p => 
+        p.is_available && (['SELLING FAST', 'LIMITED EDITION', 'BEST SELLER', 'GRAIL'].includes(p.tag))
+      );
 
-    setFilteredProducts(result);
+      // 2. Bucket B: Standard In Stock
+      const standardInStock = result.filter(p => 
+        p.is_available && !highHype.includes(p)
+      );
+
+      // 3. Bucket C: Sold Out (The Curiosity Items)
+      const soldOut = result.filter(p => !p.is_available);
+
+      // Combine Available items first (Newest first)
+      const availableSorted = [...highHype, ...standardInStock].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      // 4. WEAVING ALGORITHM: Inject a Sold Out item every 3rd slot
+      const wovenGrid: any[] = [];
+      let soldOutPtr = 0;
+
+      availableSorted.forEach((item, index) => {
+        wovenGrid.push(item);
+        // Every 3 items, if we have a sold out one, push it in
+        if ((index + 1) % 3 === 0 && soldOutPtr < soldOut.length) {
+          wovenGrid.push(soldOut[soldOutPtr]);
+          soldOutPtr++;
+        }
+      });
+
+      // Add remaining sold out items to the end
+      if (soldOutPtr < soldOut.length) {
+        wovenGrid.push(...soldOut.slice(soldOutPtr));
+      }
+
+      setFilteredProducts(wovenGrid);
+    } else {
+      // Manual Sorts (Price Low/High etc.)
+      switch (activeSort) {
+        case "price-low": result.sort((a, b) => a.jungli_price - b.jungli_price); break;
+        case "price-high": result.sort((a, b) => b.jungli_price - a.jungli_price); break;
+        case "newest": result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); break;
+      }
+      setFilteredProducts(result);
+    }
   }, [urlSearch, filters, activeSort, products]);
 
   return (
     <>
-      {/* DRAWERS (Layered above main) */}
-      <FilterDrawer 
-        isOpen={isFilterOpen} 
-        onClose={() => setIsFilterOpen(false)} 
-        filters={filters} 
-        setFilters={setFilters} 
-      />
-      <SortDrawer 
-        isOpen={isSortOpen} 
-        onClose={() => setIsSortOpen(false)} 
-        activeSort={activeSort} 
-        setSort={setActiveSort} 
-      />
+      <FilterDrawer isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} filters={filters} setFilters={setFilters} />
+      <SortDrawer isOpen={isSortOpen} onClose={() => setIsSortOpen(false)} activeSort={activeSort} setSort={setActiveSort} />
 
       <main className="min-h-screen bg-gray-50">
         
@@ -123,12 +139,12 @@ function HomeContent() {
               <span className="bg-jungli-orange text-white font-black px-4 py-1 border-2 border-black mb-4 inline-block uppercase italic shadow-brutal-sm text-xs">
                 India's No. 1 Smart Choice.
               </span>
-              <h1 className="text-6xl md:text-8xl font-[1000] uppercase italic leading-[0.85] tracking-tighter">
+              <h1 className="text-6xl md:text-8xl font-[1000] uppercase italic leading-[0.85] tracking-tighter text-white">
                 THE 20K LOOK.<br/>
-                <span className="text-jungli-orange bg-white px-2 text-black border-4 border-black inline-block mt-2">3K PRICE.</span>
+                <span className="text-jungli-orange bg-white px-2 text-black border-4 border-black inline-block mt-2 shadow-brutal">3K PRICE.</span>
               </h1>
               <p className="mt-8 text-xl font-bold max-w-lg italic opacity-80 mx-auto md:mx-0 uppercase tracking-tight">
-                Premium quality sneakers. built for the streets.
+                Master-quality silhouettes. pocket-friendly. built for streets.
               </p>
             </motion.div>
 
@@ -136,7 +152,7 @@ function HomeContent() {
               <motion.div 
                 animate={{ rotate: [3, -3, 3] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="bg-white border-8 border-black p-4 rotate-3 shadow-brutal w-72 h-72 md:w-96 md:h-96 flex items-center justify-center relative overflow-hidden group"
+                className="bg-white border-8 border-black p-4 rotate-3 shadow-brutal w-72 h-72 md:w-96 md:h-96 flex flex-col items-center justify-center relative overflow-hidden group"
               >
                 <div className="absolute inset-0 bg-jungli-orange opacity-10 group-hover:opacity-20 transition-opacity" />
                 <p className="text-black font-[1000] text-center uppercase italic text-5xl md:text-7xl z-10 leading-none">
@@ -150,10 +166,8 @@ function HomeContent() {
           </div>
         </section>
 
-        {/* PRODUCT SECTION WITH STICKY BOUNDARY */}
+        {/* STICKY ACTION BAR */}
         <section className="relative">
-          
-          {/* STICKY ACTION BAR */}
           <div 
             style={{ top: isNavbarHidden ? '0px' : '75px' }} 
             className="sticky z-40 bg-white/95 backdrop-blur-md border-y-4 border-black py-4 px-6 shadow-brutal-sm transition-all duration-300"
@@ -181,12 +195,12 @@ function HomeContent() {
             </div>
           </div>
 
-          {/* PRODUCT GRID */}
-          <div id="drops" className="py-20 px-6 max-w-7xl mx-auto min-h-[50vh]">
+          {/* SNEAKER GRID */}
+          <div id="drops" className="py-20 px-6 max-w-7xl mx-auto min-h-[60vh]">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
               {loading ? (
                 [1, 2, 3, 4].map((i) => (
-                  <div key={i} className="animate-pulse bg-gray-200 border-4 border-black aspect-[4/5] shadow-brutal-sm" />
+                  <div key={i} className="animate-pulse bg-gray-200 border-4 border-black aspect-[4/5] shadow-brutal-sm rounded-none" />
                 ))
               ) : (
                 <AnimatePresence mode="popLayout">
@@ -207,15 +221,13 @@ function HomeContent() {
               )}
             </div>
 
-            {/* EMPTY STATE */}
             {!loading && filteredProducts.length === 0 && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-40">
-                <h2 className="text-5xl font-[1000] uppercase italic text-gray-300">STASH DEPLETED</h2>
+                <h2 className="text-5xl font-[1000] uppercase italic text-gray-300 italic">STASH DEPLETED</h2>
                 <button 
                   onClick={() => {
                     setFilters({minPrice: "", maxPrice: "", size: "", category: "All"});
                     window.history.pushState({}, '', '/');
-                    window.location.reload(); // Hard reset
                   }}
                   className="mt-8 text-jungli-orange font-black underline uppercase italic text-xl decoration-4 underline-offset-8"
                 >
@@ -226,11 +238,11 @@ function HomeContent() {
           </div>
         </section>
 
-        {/* HYPE MARQUEE (Always visible above footer) */}
+        {/* MARQUEE HYPE BAR */}
         <section className="relative z-50 bg-black text-white py-12 border-y-8 border-jungli-orange overflow-hidden">
           <div className="flex animate-marquee whitespace-nowrap gap-12">
             {[...Array(10)].map((_, i) => (
-              <span key={i} className="text-5xl font-[1000] uppercase italic tracking-tighter">
+              <span key={i} className="text-5xl font-[1000] uppercase italic tracking-tighter text-white">
                 Premium Performance ★ Pan-India Shipping ★ Secure Stash ★ 
               </span>
             ))}
@@ -241,14 +253,9 @@ function HomeContent() {
   );
 }
 
-// THE ROOT WITH SUSPENSE
 export default function Home() {
   return (
-    <Suspense fallback={
-        <div className="min-h-screen bg-white flex items-center justify-center font-[1000] uppercase italic text-gray-200 text-4xl animate-pulse">
-            Booting System...
-        </div>
-    }>
+    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center font-[1000] uppercase italic text-gray-200 text-4xl animate-pulse">Booting System...</div>}>
       <HomeContent />
     </Suspense>
   );
