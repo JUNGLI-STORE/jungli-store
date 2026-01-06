@@ -14,67 +14,84 @@ export default function RelatedSlider({ currentProductId }: { currentProductId: 
 
   useEffect(() => {
     async function fetchAllDrops() {
-      // Fetch 15 random available shoes to keep the loop fresh
+      // Fetch up to 15 shoes to keep the infinite loop visually full
       const { data } = await supabase
         .from("products")
         .select("*")
-        .eq("is_available", true)
-        .neq("id", currentProductId) // Don't show the shoe they are currently viewing
+        .neq("id", currentProductId) // Don't show the shoe currently on screen
         .limit(15);
 
       if (data) setProducts(data);
     }
-    fetchAllDrops();
+    if (currentProductId) fetchAllDrops();
   }, [currentProductId]);
 
   if (products.length === 0) return null;
 
   return (
-    <section className="bg-jungli-green py-24 border-y-8 border-black sawtooth overflow-hidden">
-      <div className="max-w-[100vw]">
-        <h2 className="text-5xl md:text-7xl font-[1000] uppercase italic tracking-tighter text-white mb-16 text-center px-6">
-          KEEP <span className="text-yellow-400 underline decoration-8 decoration-black">HUNTING</span>
+    <section className="bg-jungli-green py-24 border-y-8 border-black sawtooth overflow-hidden relative">
+      {/* Decorative background stripes */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none bg-[repeating-linear-gradient(45deg,transparent,transparent_40px,rgba(0,0,0,0.1)_40px,rgba(0,0,0,0.1)_80px)]"></div>
+
+      <div className="max-w-[100vw] relative z-10">
+        <h2 className="text-5xl md:text-8xl font-[1000] uppercase italic tracking-tighter text-white mb-16 text-center px-6 leading-none">
+          KEEP <span className="text-yellow-400 underline decoration-black decoration-8 underline-offset-[-4px]">HUNTING</span>
         </h2>
 
         <Swiper
-          slidesPerView={1.5}
+          slidesPerView={1.2}
           spaceBetween={20}
-          loop={true}
+          loop={products.length > 5} // Only loop if we have enough items
           freeMode={true}
           autoplay={{
-            delay: 1,
+            delay: 0, // 0 delay for continuous movement
             disableOnInteraction: false,
+            pauseOnMouseEnter: true,
           }}
-          speed={5000} // Slow, smooth continuous crawl
+          speed={6000} // Speed of the marquee crawl (higher = slower)
           modules={[Autoplay, FreeMode]}
           breakpoints={{
-            640: { slidesPerView: 2.5, spaceBetween: 30 },
-            1024: { slidesPerView: 4.5, spaceBetween: 40 },
+            640: { slidesPerView: 2.2, spaceBetween: 30 },
+            1024: { slidesPerView: 4.2, spaceBetween: 40 },
           }}
           className="product-swiper"
         >
-          {products.map((item) => (
-            <SwiperSlide key={item.id} className="py-10">
-              <div className="hover:rotate-2 transition-transform duration-300">
-                <ProductCard
-                  id={item.id}
-                  name={item.name}
-                  brand={item.brand}
-                  luxuryPrice={item.luxury_price}
-                  jungliPrice={item.jungli_price}
-                  image={item.image_url}
-                  tag={item.tag}
-                />
-              </div>
-            </SwiperSlide>
-          ))}
+          {products.map((item) => {
+            // THE CRITICAL SAFETY CHECK:
+            if (!item || !item.id) return null;
+
+            return (
+              <SwiperSlide key={item.id} className="py-10">
+                <div className="hover:scale-105 transition-transform duration-500">
+                  <ProductCard
+                    id={item.id}
+                    name={item.name}
+                    brand={item.brand}
+                    luxuryPrice={item.luxury_price}
+                    jungliPrice={item.jungli_price}
+                    image={item.image_url}
+                    tag={item.tag}
+                    is_available={item.is_available} // Ensures 'Sold Out' shows in slider
+                  />
+                </div>
+              </SwiperSlide>
+            );
+          })}
         </Swiper>
       </div>
 
       <style jsx global>{`
-        /* This makes the slider move continuously like a marquee */
+        /* This CSS ensures the slider moves like a smooth continuous belt */
         .product-swiper .swiper-wrapper {
           transition-timing-function: linear !important;
+          display: flex;
+        }
+        /* Custom scrollbar for desktop browsing */
+        .product-swiper {
+          cursor: grab;
+        }
+        .product-swiper:active {
+          cursor: grabbing;
         }
       `}</style>
     </section>

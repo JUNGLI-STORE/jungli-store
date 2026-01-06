@@ -28,7 +28,9 @@ export default function ProfilePage() {
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        if (user?.id) {
+  const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+}
         .single();
 
       if (profileData) {
