@@ -14,11 +14,11 @@ export default function RelatedSlider({ currentProductId }: { currentProductId: 
 
   useEffect(() => {
     async function fetchAllDrops() {
-      // Fetch up to 15 shoes to keep the infinite loop visually full
+      // Fetch up to 15 shoes to keep the loop visually full
       const { data } = await supabase
         .from("products")
         .select("*")
-        .neq("id", currentProductId) // Don't show the shoe currently on screen
+        .neq("id", currentProductId)
         .limit(15);
 
       if (data) setProducts(data);
@@ -29,40 +29,45 @@ export default function RelatedSlider({ currentProductId }: { currentProductId: 
   if (products.length === 0) return null;
 
   return (
-    <section className="bg-jungli-green py-24 border-y-8 border-black sawtooth overflow-hidden relative">
-      {/* Decorative background stripes */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none bg-[repeating-linear-gradient(45deg,transparent,transparent_40px,rgba(0,0,0,0.1)_40px,rgba(0,0,0,0.1)_80px)]"></div>
-
-      <div className="max-w-[100vw] relative z-10">
-        <h2 className="text-5xl md:text-8xl font-[1000] uppercase italic tracking-tighter text-white mb-16 text-center px-6 leading-none">
-          KEEP <span className="text-yellow-400 underline decoration-black decoration-8 underline-offset-[-4px]">HUNTING</span>
+    <section className="bg-jungli-green py-20 border-y-8 border-black sawtooth overflow-hidden relative">
+      {/* 1. CONTAINER: Now constrained to max-width so it doesn't feel bulky */}
+      <div className="max-w-7xl mx-auto px-6 relative z-10">
+        
+        {/* 2. REFINED TYPOGRAPHY: Scaled down from 8xl to 6xl for better balance */}
+        <h2 className="text-4xl md:text-6xl font-[1000] uppercase italic tracking-tighter text-white mb-12 text-center leading-none">
+          KEEP <span className="text-yellow-400 underline decoration-black decoration-4 underline-offset-4">HUNTING</span>
         </h2>
 
         <Swiper
-          slidesPerView={1.2}
-          spaceBetween={20}
-          loop={products.length > 5} // Only loop if we have enough items
+          // 3. REFINED CARD SIZING: Increased slidesPerView to make cards smaller
+          slidesPerView={1.3}
+          spaceBetween={15}
+          loop={products.length > 5}
           freeMode={true}
           autoplay={{
-            delay: 0, // 0 delay for continuous movement
+            delay: 0,
             disableOnInteraction: false,
             pauseOnMouseEnter: true,
           }}
-          speed={6000} // Speed of the marquee crawl (higher = slower)
+          speed={7000} // Slightly slower for a more premium feel
           modules={[Autoplay, FreeMode]}
           breakpoints={{
-            640: { slidesPerView: 2.2, spaceBetween: 30 },
-            1024: { slidesPerView: 4.2, spaceBetween: 40 },
+            // Tablet: show 3 cards
+            640: { slidesPerView: 2.5, spaceBetween: 20 },
+            // Desktop: show 4 cards
+            1024: { slidesPerView: 4, spaceBetween: 25 },
+            // Large Desktop: show 5 cards (keeps cards small and sharp)
+            1280: { slidesPerView: 4.5, spaceBetween: 30 },
           }}
           className="product-swiper"
         >
           {products.map((item) => {
-            // THE CRITICAL SAFETY CHECK:
             if (!item || !item.id) return null;
 
             return (
-              <SwiperSlide key={item.id} className="py-10">
-                <div className="hover:scale-105 transition-transform duration-500">
+              <SwiperSlide key={item.id} className="py-6">
+                {/* Scale effect is now subtle to avoid the 'zoomed' look */}
+                <div className="scale-95 hover:scale-100 transition-transform duration-300">
                   <ProductCard
                     id={item.id}
                     name={item.name}
@@ -71,7 +76,7 @@ export default function RelatedSlider({ currentProductId }: { currentProductId: 
                     jungliPrice={item.jungli_price}
                     image={item.image_url}
                     tag={item.tag}
-                    is_available={item.is_available} // Ensures 'Sold Out' shows in slider
+                    is_available={item.is_available}
                   />
                 </div>
               </SwiperSlide>
@@ -81,14 +86,16 @@ export default function RelatedSlider({ currentProductId }: { currentProductId: 
       </div>
 
       <style jsx global>{`
-        /* This CSS ensures the slider moves like a smooth continuous belt */
+        /* Perfectly linear movement for the 'conveyor belt' effect */
         .product-swiper .swiper-wrapper {
           transition-timing-function: linear !important;
           display: flex;
         }
-        /* Custom scrollbar for desktop browsing */
+        
+        /* Clean grab cursor */
         .product-swiper {
           cursor: grab;
+          padding-bottom: 20px;
         }
         .product-swiper:active {
           cursor: grabbing;
