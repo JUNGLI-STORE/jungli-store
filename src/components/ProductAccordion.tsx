@@ -1,7 +1,10 @@
 "use client";
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Ruler, Info, PackageCheck, Sparkles, Footprints, Zap } from 'lucide-react';
+import { 
+  ChevronDown, Ruler, Info, PackageCheck, 
+  Sparkles, Footprints, Zap, ShieldCheck, FileText 
+} from 'lucide-react';
 
 interface AccordionProps {
   title: string;
@@ -17,7 +20,7 @@ const AccordionItem = ({ title, icon, children, defaultOpen = false }: Accordion
     <div className="border-b-4 border-black last:border-b-0">
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full py-6 flex justify-between items-center group text-left"
+        className="w-full py-6 flex justify-between items-center group text-left px-2"
       >
         <div className="flex items-center gap-4">
           <div className="bg-black text-white p-2 border-2 border-black group-hover:bg-jungli-orange transition-colors shadow-brutal-sm">
@@ -44,7 +47,7 @@ const AccordionItem = ({ title, icon, children, defaultOpen = false }: Accordion
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className="pb-10 pt-2 px-1">
+            <div className="pb-10 pt-2 px-2">
               {children}
             </div>
           </motion.div>
@@ -58,16 +61,95 @@ export default function ProductAccordion({ product }: { product: any }) {
   return (
     <div className="mt-12 border-t-8 border-black">
       
-      {/* 1. SIZE GUIDE - EXACT RE-DESIGN */}
+      {/* 1. THE STORY SECTION */}
+      <AccordionItem title="The Story" icon={<FileText size={20} />} defaultOpen={true}>
+        <div className="bg-gray-50 border-l-8 border-jungli-orange p-6 shadow-brutal-sm">
+          <p className="font-bold italic text-black leading-relaxed text-sm md:text-base uppercase">
+            {product.description || "The highest-tier materials, re-engineered street beast. Secure your pair before the stash runs dry."}
+          </p>
+        </div>
+      </AccordionItem>
+
+      {/* 2. BUILD REPORTS (TECHNICAL & QUALITY) */}
+      <AccordionItem title="Build Reports" icon={<Zap size={20} />}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          
+          {/* MATERIAL INTEL */}
+          <div className="space-y-6">
+            <div className="bg-white border-4 border-black p-5 shadow-brutal-sm">
+              <h5 className="font-[1000] uppercase italic text-sm tracking-widest text-jungli-orange mb-4 flex items-center gap-2">
+                <Zap size={16} fill="currentColor" /> MATERIAL INTEL
+              </h5>
+              <div className="space-y-4">
+                <div className="border-l-4 border-black pl-4">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Exterior Upper</p>
+                  <p className="font-bold italic text-sm text-black">
+                    {product.materials_json?.upper || "Master-Grade Street Performance Synthetic"}
+                  </p>
+                </div>
+                <div className="border-l-4 border-black pl-4">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Interior Lining</p>
+                  <p className="font-bold italic text-sm text-black">
+                    {product.materials_json?.footbed || "Sweat-Wick Technical Mesh (Breathable)"}
+                  </p>
+                </div>
+                <div className="border-l-4 border-black pl-4">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Traction Unit</p>
+                  <p className="font-bold italic text-sm text-black">
+                    {product.materials_json?.sole || "Triple-Cushioned High-Grip TPR Unit"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* QUALITY CHECKPOINTS */}
+          <div className="space-y-6">
+            <div className="bg-black text-white border-4 border-black p-5 shadow-brutal-sm">
+              <h5 className="font-[1000] uppercase italic text-sm tracking-widest text-yellow-400 mb-4 flex items-center gap-2">
+                <ShieldCheck size={18} /> QUALITY REPORT
+              </h5>
+              <ul className="space-y-4">
+                 {(product.bullet_points || [
+                   "Reinforced heavy-duty street stitching",
+                   "Indian feet-friendly spacious toe-box",
+                   "Anti-scuff performance texture",
+                   "All-day dual-density comfort cushioning"
+                 ]).map((point: string, i: number) => (
+                   <li key={i} className="flex items-start gap-3">
+                     <span className="text-jungli-orange font-black">⚡️</span>
+                     <p className="font-black uppercase italic text-[11px] leading-tight tracking-tight">
+                       {point}
+                     </p>
+                   </li>
+                 ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Branded Unboxing Section (Stays at bottom of Build Reports) */}
+        <div className="mt-8 bg-jungli-green text-white p-6 border-4 border-black shadow-brutal-sm relative group overflow-hidden">
+            <div className="absolute top-0 right-0 p-2 opacity-10 rotate-12"><PackageCheck size={120}/></div>
+            <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-4 pb-2 border-b-2 border-white/20">
+                  <PackageCheck size={24} className="text-yellow-400" />
+                  <p className="font-[1000] italic text-lg uppercase tracking-tighter">THE UNBOXING STASH</p>
+                </div>
+                <p className="text-[10px] font-bold italic opacity-90 leading-relaxed uppercase tracking-widest">
+                   Every pair of JUNGLI is secured in our signature <span className="text-yellow-400">MATTE BLACK VAULT BOX</span>. 
+                   Includes premium protective dust bags, authenticity cards, extra laces, 
+                   and a limited edition keychain.
+                </p>
+            </div>
+        </div>
+      </AccordionItem>
+
+      {/* 3. SIZE GUIDE */}
       <AccordionItem title="Size Guide" icon={<Ruler size={20} />}>
         <div className="bg-[#FFFFEE] border-4 border-black p-4 md:p-8 shadow-brutal relative overflow-hidden">
-          {/* Yellow Grid Background Pattern */}
           <div className="absolute inset-0 opacity-[0.15] pointer-events-none bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:12px_12px]"></div>
           
-          {/* Cloud Decor Detail */}
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white rounded-full blur-xl opacity-60" />
-          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white rounded-full blur-xl opacity-60" />
-
           <div className="relative z-10">
             <h4 className="text-4xl font-[1000] uppercase italic text-center mb-8 tracking-tighter text-black underline decoration-yellow-400 decoration-8 underline-offset-[-2px]">
                 MEN'S SIZE CHART
@@ -107,82 +189,6 @@ export default function ProductAccordion({ product }: { product: any }) {
                 <p className="text-[10px] font-bold uppercase leading-tight italic text-gray-600">
                     <span className="text-black font-black">HOW TO MEASURE:</span> Place your foot on a sheet of paper, mark the heel and the longest toe. Measure the distance in CM and compare above.
                 </p>
-            </div>
-          </div>
-        </div>
-      </AccordionItem>
-
-      {/* 2. BUILD REPORTS - HONEST QUALITY SPECS */}
-      <AccordionItem title="Build Reports" icon={<Info size={20} />} defaultOpen={true}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          
-          {/* Tech Specs Column */}
-          <div className="space-y-8">
-            <div>
-              <h5 className="font-[1000] uppercase italic text-sm tracking-widest text-jungli-orange mb-4 flex items-center gap-2">
-                <Zap size={16} fill="currentColor" /> MATERIAL INTEL
-              </h5>
-              <div className="space-y-4">
-                <div className="border-l-4 border-black pl-4">
-                  <p className="text-[10px] font-black text-gray-400 uppercase">Exterior Upper</p>
-                  <p className="font-bold italic text-sm">{product.materials_json?.upper || "Master-Grade Street Performance Synthetic"}</p>
-                </div>
-                <div className="border-l-4 border-black pl-4">
-                  <p className="text-[10px] font-black text-gray-400 uppercase">Interior Lining</p>
-                  <p className="font-bold italic text-sm">{product.materials_json?.footbed || "Sweat-Wick Technical Mesh (Breathable)"}</p>
-                </div>
-                <div className="border-l-4 border-black pl-4">
-                  <p className="text-[10px] font-black text-gray-400 uppercase">Traction Unit</p>
-                  <p className="font-bold italic text-sm">{product.materials_json?.sole || "Triple-Cushioned High-Grip TPR Unit"}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 border-2 border-black p-4 rotate-[-1deg]">
-               <h5 className="font-black uppercase italic text-[10px] mb-2 text-gray-400">Quality Checklist</h5>
-               <ul className="space-y-2">
-                 {(product.bullet_points || [
-                   "Reinforced heavy-duty street stitching",
-                   "Indian feet-friendly spacious toe-box",
-                   "Anti-scuff performance texture",
-                   "All-day dual-density comfort cushioning"
-                 ]).map((point: string, i: number) => (
-                   <li key={i} className="flex items-center gap-2 font-black uppercase italic text-[10px]">
-                     <div className="w-1.5 h-1.5 bg-black rounded-full" /> {point}
-                   </li>
-                 ))}
-               </ul>
-            </div>
-          </div>
-
-          {/* Unboxing Experience Column */}
-          <div className="flex flex-col h-full">
-            <div className="flex-1 bg-black text-white p-8 border-4 border-black shadow-brutal-sm relative group">
-                {/* Visual Sparkle */}
-                <Sparkles className="absolute top-4 right-4 text-yellow-400 group-hover:rotate-45 transition-transform" size={24} />
-                
-                <div className="flex items-center gap-3 mb-6 pb-2 border-b-2 border-gray-800">
-                  <PackageCheck size={28} className="text-jungli-orange" />
-                  <p className="font-[1000] italic text-xl uppercase tracking-tighter">THE UNBOXING STASH</p>
-                </div>
-                
-                <p className="text-xs font-bold italic opacity-90 leading-loose uppercase tracking-wider mb-6">
-                   Every pair of JUNGLI is secured in our signature <span className="text-jungli-orange">MATTE BLACK VAULT BOX</span>. 
-                   <br/><br/>
-                   <span className="text-white border-b-2 border-jungli-orange">INCLUDES:</span>
-                   <br/>
-                   • 2x High-Density Protective Dust Bags
-                   <br/>
-                   • 1x Authentication & Quality ID Card
-                   <br/>
-                   • 1x Extra Set of Cotton Flat Laces
-                   <br/>
-                   • 1x Limited Edition Jungli Keychain
-                </p>
-
-                <div className="mt-auto pt-4 border-t-2 border-gray-800 text-[9px] font-black uppercase text-gray-500 text-center">
-                    Elevating the game from the moment you cut the tape.
-                </div>
             </div>
           </div>
         </div>
