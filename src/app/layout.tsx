@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { CartProvider } from "@/context/CartContext";
-import Navbar from "@/components/Navbar"; // Ensure Navbar is imported
+import Navbar from "@/components/Navbar";
 import CartSidebar from "@/components/CartSidebar";
 import PreLoader from "@/components/PreLoader";
 import Footer from "@/components/Footer";
+
+// 1. IMPORT TRACKING ENGINES
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import Script from "next/script";
 
 import "./globals.css";
 
@@ -23,7 +28,7 @@ export const metadata: Metadata = {
   title: "JUNGLI | Luxury Kicks, Street Prices",
   description: "India's wildest sneaker drops. Master-quality silhouettes for under ₹3,999. Born of Fire.",
   icons: {
-    icon: "/logo.svg", // This uses your logo as the browser tab icon
+    icon: "/logo.svg",
   }
 };
 
@@ -34,28 +39,33 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* 2. UMAMI TRACKING SCRIPT */}
+        <Script
+          async
+          src="https://cloud.umami.is/script.js"
+          data-website-id="625671e3-daf8-450c-b0a7-35bd284214e5"
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        {/* The CartProvider allows every component to see what's in the bag */}
         <CartProvider>
           
-          {/* 1. The Intro Animation Layer */}
           <PreLoader /> 
 
-          {/* 2. The Navigation Layer (Sticky) */}
           <Navbar />
 
-          {/* 3. The Main Content (Home Page, Product Pages, etc.) */}
           {children}
 
-          {/* 4. The Global Trust Layer */}
           <Footer />
 
-          {/* 5. The Functional Drawers & Buttons (Floating Layers) */}
           <CartSidebar />
           
+          {/* 3. VERCEL TRACKING ENGINES */}
+          <Analytics />
+          <SpeedInsights />
 
         </CartProvider>
       </body>

@@ -1,6 +1,6 @@
 "use client";
 import Link from 'next/link';
-import { Instagram, Mail, ArrowUp, Zap, ShieldCheck } from 'lucide-react';
+import { Instagram, Mail, ArrowUp, Zap, ShieldCheck, MessageCircle, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function Footer() {
@@ -28,6 +28,15 @@ export default function Footer() {
               <Link href="https://www.instagram.com/jungli_store/" target="_blank" className="p-3 border-2 border-white hover:bg-jungli-orange hover:border-black transition-all shadow-[4px_4px_0px_#fff] hover:shadow-none hover:translate-x-1 hover:translate-y-1">
                 <Instagram size={20} />
               </Link>
+              
+              {/* WhatsApp Logo: Composed of MessageBubble + Phone */}
+              <Link href="https://wa.me/919713524844" target="_blank" className="p-3 border-2 border-white hover:bg-jungli-orange hover:border-black transition-all shadow-[4px_4px_0px_#fff] hover:shadow-none hover:translate-x-1 hover:translate-y-1 flex items-center justify-center">
+                <div className="relative flex items-center justify-center w-5 h-5">
+                  <MessageCircle size={24} strokeWidth={1.5} className="mb-0.5" />
+                  <Phone size={10} className="absolute mb-[1px] ml-[1px] fill-current" strokeWidth={2.5} />
+                </div>
+              </Link>
+
               <Link href="mailto:junglistore.help@gmail.com" className="p-3 border-2 border-white hover:bg-jungli-orange hover:border-black transition-all shadow-[4px_4px_0px_#fff] hover:shadow-none hover:translate-x-1 hover:translate-y-1">
                 <Mail size={20} />
               </Link>
@@ -41,15 +50,15 @@ export default function Footer() {
               <li><Link href="/" className="hover:text-white transition-colors underline decoration-transparent hover:decoration-white decoration-2">Latest Drops</Link></li>
               <li><Link href="/" className="hover:text-white transition-colors underline decoration-transparent hover:decoration-white decoration-2">Best Sellers</Link></li>
               <li><Link href="/profile" className="hover:text-white transition-colors underline decoration-transparent hover:decoration-white decoration-2">My Stash</Link></li>
-              {/* ✅ UPDATED: Points to /about */}
               <li><Link href="/about" className="text-jungli-orange hover:text-white transition-colors underline decoration-transparent hover:decoration-white decoration-2">The Vision</Link></li>
             </ul>
           </div>
 
-          {/* 3. INTEL (Legal) */}
+          {/* 3. INTEL (Legal & Ops) */}
           <div>
             <h3 className="font-[1000] uppercase italic text-xl mb-8 border-b-4 border-jungli-orange inline-block">Intel</h3>
             <ul className="space-y-4 font-black uppercase italic text-sm tracking-widest text-gray-300">
+              <li><Link href="/contact" className="hover:text-white transition-colors underline decoration-transparent hover:decoration-white decoration-2">Contact Ops</Link></li>
               <li><Link href="/shipping" className="hover:text-white transition-colors underline decoration-transparent hover:decoration-white decoration-2">Shipping Policy</Link></li>
               <li><Link href="/refunds" className="hover:text-white transition-colors underline decoration-transparent hover:decoration-white decoration-2">Exchanges & Returns</Link></li>
               <li><Link href="/terms" className="hover:text-white transition-colors underline decoration-transparent hover:decoration-white decoration-2">Terms of Service</Link></li>
