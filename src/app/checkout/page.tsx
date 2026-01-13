@@ -160,9 +160,10 @@ export default function CheckoutPage() {
       </AnimatePresence>
 
       <main className="min-h-screen bg-gray-100 py-10 px-4 md:px-6 pb-20">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div className="max-w-4xl mx-auto space-y-10">
           
-          <div className="lg:col-span-2 space-y-8">
+          {/* --- FORMS SECTION (Vertical Stack) --- */}
+          <div className="space-y-8">
             <section className="bg-white border-4 border-black p-6 md:p-10 shadow-brutal">
               <h2 className="text-4xl font-[1000] uppercase italic tracking-tighter mb-8 text-black">1. Shipping <span className="text-jungli-orange">Intel</span></h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 uppercase italic font-bold">
@@ -176,7 +177,11 @@ export default function CheckoutPage() {
                  </div>
                  <div className="flex flex-col gap-2 md:col-span-2">
                     <label className="text-[10px]">Address</label>
-                    <textarea name="address" onChange={handleInput} placeholder="HOUSE NO, STREET, AREA..." className="p-4 border-2 border-black outline-none focus:bg-jungli-orange/5" rows={3} />
+                    <textarea name="address" onChange={handleInput} placeholder="HOUSE NO, STREET, AREA..." className="p-4 border-2 border-black outline-none focus:bg-jungli-orange/5" rows={2} />
+                 </div>
+                 <div className="flex flex-col gap-2 md:col-span-2">
+                    <label className="text-[10px]">Pincode</label>
+                    <input name="pincode" onChange={handleInput} placeholder="000000" className="p-4 border-2 border-black outline-none focus:bg-jungli-orange/5" />
                  </div>
               </div>
             </section>
@@ -204,66 +209,72 @@ export default function CheckoutPage() {
             </section>
           </div>
 
-          {/* --- THE REDESIGNED SUMMARY CARD (MATCHES IMAGE) --- */}
-          <div className="space-y-6">
-            <section className="bg-white border-8 border-black p-6 md:p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] sticky top-32">
-              <h2 className="text-5xl font-[1000] uppercase italic tracking-tighter mb-4 text-black">FINAL STASH</h2>
+          {/* --- THE REDESIGNED "WIDE & SHORT" FINAL STASH BOX --- */}
+          <section className="bg-white border-8 border-black p-6 md:p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+            <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
               
-              <div className="h-2 bg-black w-full mb-8" /> {/* Thick Top Separator */}
+              {/* LEFT SIDE: Breakdown */}
+              <div className="flex-1 w-full space-y-4">
+                 <h2 className="text-5xl font-[1000] uppercase italic tracking-tighter mb-4 text-black leading-none">
+                    FINAL <br/><span className="text-jungli-orange">STASH</span>
+                 </h2>
+                 <div className="h-1 bg-black w-20 mb-4" /> 
 
-              <div className="space-y-6">
-                 {/* Items Total */}
-                 <div className="flex justify-between items-center">
-                    <span className="font-[1000] uppercase italic text-gray-400 text-lg">Items Total</span>
-                    <span className="font-[1000] text-gray-400 text-xl">₹{totalPrice.toLocaleString()}</span>
-                 </div>
-
-                 {/* Delivery Charge */}
-                 <div className="flex justify-between items-center">
-                    <span className="font-[1000] uppercase italic text-gray-400 text-lg">Delivery</span>
-                    <span className={`font-[1000] text-xl ${deliveryCharge === 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {deliveryCharge === 0 ? 'FREE' : `+ ₹${deliveryCharge}`}
-                    </span>
-                 </div>
-
-                 {/* UPI Discount Line */}
-                 {paymentMethod === 'UPI' && (
-                    <div className="bg-green-50 border-2 border-green-200 p-3 flex justify-between items-center">
-                        <span className="font-[1000] uppercase italic text-green-600 text-sm">UPI Mission Discount</span>
-                        <span className="font-[1000] text-green-600 text-lg">- ₹{upiDiscountAmt}</span>
+                 <div className="space-y-2">
+                    <div className="flex justify-between items-center text-sm md:text-base border-b border-dashed border-gray-300 pb-2">
+                       <span className="font-[1000] uppercase italic text-gray-500">Items Total</span>
+                       <span className="font-[1000] text-black">₹{totalPrice.toLocaleString()}</span>
                     </div>
-                 )}
 
-                 {/* Hunter Code Discount Line */}
-                 {hunterDiscount > 0 && (
-                    <div className="bg-orange-50 border-2 border-orange-200 p-3 flex justify-between items-center">
-                        <span className="font-[1000] uppercase italic text-jungli-orange text-sm">Hunter Credit Applied</span>
-                        <span className="font-[1000] text-jungli-orange text-lg">- ₹{hunterDiscount}</span>
+                    <div className="flex justify-between items-center text-sm md:text-base border-b border-dashed border-gray-300 pb-2">
+                       <span className="font-[1000] uppercase italic text-gray-500">Delivery</span>
+                       <span className={`font-[1000] ${deliveryCharge === 0 ? 'text-green-600' : 'text-red-600'}`}>
+                           {deliveryCharge === 0 ? 'FREE' : `+ ₹${deliveryCharge}`}
+                       </span>
                     </div>
-                 )}
 
-                 <div className="h-2 bg-black w-full my-4" /> {/* Thick Bottom Separator */}
+                    {paymentMethod === 'UPI' && (
+                       <div className="flex justify-between items-center text-sm md:text-base text-green-600 bg-green-50 px-2 py-1">
+                           <span className="font-[1000] uppercase italic">UPI Discount</span>
+                           <span className="font-[1000]">- ₹{upiDiscountAmt}</span>
+                       </div>
+                    )}
+                    
+                    {hunterDiscount > 0 && (
+                       /* --- CHANGED TO GREEN STYLE HERE --- */
+                       <div className="flex justify-between items-center text-sm md:text-base text-green-600 bg-green-50 px-2 py-1">
+                           <span className="font-[1000] uppercase italic">Hunter Credit Applied</span>
+                           <span className="font-[1000]">- ₹{hunterDiscount}</span>
+                       </div>
+                    )}
+                 </div>
+              </div>
 
-                 {/* Grand Total */}
-                 <div className="flex justify-between items-center py-4">
-                    <span className="text-5xl font-[1000] uppercase italic tracking-tighter">TOTAL</span>
-                    <span className="text-5xl font-[1000] text-[#FFB088] tracking-tighter">₹{finalTotal.toLocaleString()}</span>
+              {/* RIGHT SIDE: Total & Action */}
+              <div className="flex-1 w-full md:border-l-4 md:border-black md:pl-8 flex flex-col gap-4">
+                 <div className="flex justify-between items-end md:block">
+                    <p className="font-black uppercase italic text-xs text-gray-400 mb-1">Total Payable Amount</p>
+                    <p className="text-6xl font-[1000] text-black italic tracking-tighter leading-none">
+                      ₹{finalTotal.toLocaleString()}
+                    </p>
                  </div>
 
                  <button 
                   onClick={handleProcessOrder}
                   disabled={loading || cart.length === 0}
-                  className="w-full bg-black text-white text-4xl font-[1000] py-8 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all uppercase italic flex items-center justify-center gap-3 disabled:opacity-50"
+                  className="w-full bg-black text-white text-3xl font-[1000] py-6 border-4 border-black shadow-[6px_6px_0px_0px_rgba(255,95,31,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all uppercase italic flex items-center justify-center gap-3 disabled:opacity-50 mt-2"
                 >
                   {loading ? <Loader2 className="animate-spin" /> : "SECURE NOW"}
                 </button>
                 
-                <p className="text-center font-black uppercase italic text-gray-400 text-xs mt-4 tracking-widest">
-                   {paymentMethod === 'UPI' ? 'Instant Order Processing' : 'WhatsApp Verification Required'}
+                <p className="text-center md:text-left font-black uppercase italic text-gray-400 text-[10px] tracking-widest">
+                   {paymentMethod === 'UPI' ? '⚡️ Instant Processing' : '📞 Verification Call Required'}
                 </p>
               </div>
-            </section>
-          </div>
+
+            </div>
+          </section>
+
         </div>
       </main>
     </>
