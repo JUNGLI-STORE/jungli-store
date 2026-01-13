@@ -38,9 +38,11 @@ export default function ProductPage() {
   useEffect(() => {
     async function getProductAndReviews() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
+        // 1. Auth Status check
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        setUser(authUser);
 
+        // 2. Fetch Product Details
         const { data: pData, error: pError } = await supabase
           .from('products')
           .select('*')
@@ -51,6 +53,7 @@ export default function ProductPage() {
         setProduct(pData);
         setActiveMedia({ type: 'image', url: pData.image_url });
 
+        // 3. Fetch Linked Reviews
         const { data: rData } = await supabase
           .from('product_reviews')
           .select('*')
@@ -58,6 +61,7 @@ export default function ProductPage() {
           .order('created_at', { ascending: false });
 
         if (rData) setReviews(rData);
+
       } catch (err) {
         console.error("Stash Load Error:", err);
       } finally {
@@ -67,23 +71,41 @@ export default function ProductPage() {
     if (id) getProductAndReviews();
   }, [id]);
 
+  // --- AUTOMATED RESTOCK NOTIFICATION ---
   const handleNotifyMe = async () => {
-    let emailToNotify = user ? user.email : prompt("WHERE SHOULD WE SEND THE ALERT? (Enter Email)");
-    if (!emailToNotify || !emailToNotify.includes('@')) return;
-    
+    let emailToNotify = "";
+
+    if (!user) {
+      const guestEmail = prompt("WHERE SHOULD WE SEND THE ALERT? (Enter Email)");
+      if (!guestEmail || !guestEmail.includes('@')) {
+        alert("VALID EMAIL REQUIRED TO TRACK STASH!");
+        return;
+      }
+      emailToNotify = guestEmail;
+    } else {
+      emailToNotify = user.email;
+    }
+
     setIsSubmittingNotify(true);
     const { error } = await supabase.from('restock_notifications').insert([{ 
       email: emailToNotify, 
       product_id: product.id, 
       product_name: product.name 
     }]);
-    
-    if (!error) setIsNotified(true);
+
+    if (!error) {
+      setIsNotified(true);
+    } else {
+      alert("ALREADY ON THE WAITLIST!");
+    }
     setIsSubmittingNotify(false);
   };
 
   const handleAddToCart = () => {
-    if (!user) { setShowAuthModal(true); return; }
+    if (!user) {
+        setShowAuthModal(true);
+        return;
+    }
     if (!selectedSize) {
       setShowError(true);
       setTimeout(() => setShowError(false), 3000);
@@ -100,29 +122,26 @@ export default function ProductPage() {
     setIsCartOpen(true);
   };
 
-  // 1. THE LOADING GUARD
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <Loader2 className="animate-spin text-jungli-orange" size={48} />
     </div>
   );
 
-  // 2. THE ERROR GUARD
   if (!product) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white p-6 text-center">
       <h1 className="text-5xl font-[1000] uppercase italic mb-4">404 - STASH EMPTY</h1>
-      <Link href="/" className="bg-black text-white px-10 py-5 border-4 border-black font-black uppercase shadow-brutal">Return to Base</Link>
+      <Link href="/" className="bg-black text-white px-10 py-5 border-4 border-black font-black uppercase shadow-brutal active:scale-95 transition-all">Return to Base</Link>
     </div>
   );
 
-  // 3. SAFE DATA PARSING
   const discount = Math.round(((product.luxury_price - product.jungli_price) / product.luxury_price) * 100);
   const gallery = product.images || [product.image_url];
   const videoUrls = product.video_urls || [];
 
   return (
     <>
-      {/* FULL SCREEN LIGHTBOX */}
+      {/* 1. FULL SCREEN LIGHTBOX (MODAL) */}
       <AnimatePresence>
         {isLightboxOpen && (
           <motion.div 
@@ -131,20 +150,24 @@ export default function ProductPage() {
             onClick={() => setIsLightboxOpen(false)}
           >
             <button className="absolute top-10 right-10 text-black border-4 border-black p-2 hover:bg-black hover:text-white transition-all"><X size={32} /></button>
-            <motion.img initial={{ scale: 0.9 }} animate={{ scale: 1 }} src={activeMedia?.url} className="max-w-full max-h-full object-contain shadow-[20px_20px_0px_#000] border-8 border-black bg-white" />
+            <motion.img 
+              initial={{ scale: 0.9 }} animate={{ scale: 1 }} 
+              src={activeMedia?.url} 
+              className="max-w-full max-h-full object-contain shadow-[20px_20px_0px_#000] border-8 border-black bg-white" 
+            />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ACCESS DENIED MODAL */}
+      {/* 2. ACCESS DENIED MODAL */}
       <AnimatePresence>
         {showAuthModal && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAuthModal(false)} className="absolute inset-0 bg-black/80 backdrop-blur-md" />
             <motion.div initial={{ scale: 0.9, rotate: -2 }} animate={{ scale: 1, rotate: 0 }} className="relative bg-white border-8 border-black p-10 max-w-sm w-full shadow-[15px_15px_0px_#FF5F1F] text-center" >
-              <button onClick={() => setShowAuthModal(false)} className="absolute top-4 right-4 border-2 border-black p-1 hover:bg-black hover:text-white"><X size={20} /></button>
+              <button onClick={() => setShowAuthModal(false)} className="absolute top-4 right-4 border-2 border-black p-1"><X size={20} /></button>
               <div className="bg-yellow-400 w-20 h-20 border-4 border-black flex items-center justify-center mx-auto mb-6 -mt-20 rotate-12 shadow-brutal-sm text-black"><Lock size={40} /></div>
-              <h2 className="text-4xl font-[1000] uppercase italic tracking-tighter mb-4 leading-none text-black text-center">HOLD UP!<br/><span className="text-jungli-orange">ACCESS DENIED</span></h2>
+              <h2 className="text-4xl font-[1000] uppercase italic tracking-tighter mb-4 text-black">HOLD UP!<br/><span className="text-jungli-orange">ACCESS DENIED</span></h2>
               <p className="font-bold italic text-gray-500 mb-8 uppercase text-xs tracking-widest text-center leading-relaxed">Join the jungle to secure this pair. Login to continue your hunt.</p>
               <button onClick={() => router.push('/login')} className="w-full bg-black text-white py-5 border-4 border-black font-black uppercase shadow-brutal-sm">Go to Login —&gt;</button>
             </motion.div>
@@ -154,9 +177,9 @@ export default function ProductPage() {
 
       <main className="min-h-screen bg-white pb-40 overflow-x-hidden">
         {/* BOUTIQUE GRID: 12 Columns, Max width 6xl */}
-        <div className="max-w-6xl mx-auto px-4 md:px-12 pt-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
+        <div className="max-w-6xl mx-auto px-4 md:px-12 pt-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
           
-          {/* --- LEFT COLUMN: MEDIA GALLERY & ACCORDION --- */}
+          {/* --- LEFT COLUMN: MEDIA GALLERY & DESCRIPTION (LHS UTILIZATION) --- */}
           <div className="lg:col-span-5 space-y-10">
             <div className="space-y-6">
               <div 
@@ -168,7 +191,7 @@ export default function ProductPage() {
                     <motion.img 
                       key={activeMedia.url} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                       src={activeMedia.url} 
-                      className="w-full h-full object-contain p-8"
+                      className="w-full h-full object-contain p-8" // FIXED: Full Visibility
                       alt=""
                       onError={(e) => {(e.target as HTMLImageElement).src = "https://placehold.co/800x800/000000/FFFFFF/png?text=STASH+LOADING"}}
                     />
@@ -176,15 +199,20 @@ export default function ProductPage() {
                     <motion.video key={activeMedia?.url} initial={{ opacity: 0 }} animate={{ opacity: 1 }} src={activeMedia?.url} autoPlay loop muted playsInline className="w-full h-full object-contain bg-black" />
                   )}
                 </AnimatePresence>
-                <div className="absolute top-6 left-6 bg-jungli-orange text-white px-4 py-2 border-4 border-black font-[1000] italic -rotate-12 text-xs uppercase shadow-brutal-sm">-{discount}% OFF</div>
-                {!product.is_available && <div className="absolute top-6 right-6 bg-red-600 text-white px-4 py-2 border-4 border-black font-[1000] italic rotate-12 text-xs uppercase shadow-brutal-sm">SOLD OUT</div>}
-              </div>
+                
+                <div className="absolute top-6 left-6 bg-jungli-orange text-white px-4 py-2 border-4 border-black font-[1000] italic -rotate-12 shadow-brutal-sm text-xs uppercase tracking-tight">-{discount}% OFF</div>
+                {!product.is_available && <div className="absolute top-6 right-6 bg-red-600 text-white px-4 py-2 border-4 border-black font-[1000] italic rotate-12 shadow-brutal-sm text-xs uppercase">SOLD OUT</div>}
+                
+                <div className="absolute bottom-6 right-6 bg-white border-4 border-black text-black p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Maximize2 size={24} />
+                </div>
+            </div>
 
-              {/* THUMBNAILS */}
+              {/* THUMBNAILS TRACK */}
               <div className="flex gap-3 overflow-x-auto pb-4 custom-scrollbar">
                  {gallery.map((img: string, idx: number) => (
                    <div key={idx} onClick={() => {setActiveMedia({ type: 'image', url: img }); setIsLightboxOpen(false)}} 
-                     className={`w-16 h-16 md:w-20 md:h-20 border-4 border-black flex-shrink-0 cursor-pointer transition-all bg-gray-50 ${activeMedia?.url === img ? 'shadow-brutal-sm translate-x-1 border-jungli-orange opacity-100' : 'opacity-40 grayscale'}`}>
+                     className={`w-16 h-16 md:w-20 md:h-20 border-4 border-black flex-shrink-0 cursor-pointer transition-all bg-gray-50 ${activeMedia?.url === img ? 'shadow-brutal-sm translate-x-1 border-jungli-orange opacity-100' : 'opacity-40 grayscale hover:opacity-100'}`}>
                      <img src={img} className="w-full h-full object-contain p-1" alt="" />
                    </div>
                  ))}
@@ -197,20 +225,20 @@ export default function ProductPage() {
               </div>
             </div>
 
-            {/* ✅ DESKTOP ACCORDION: Fills the LHS space */}
+            {/* ✅ DESKTOP ACCORDION: LHS placement to fill space */}
             <div className="hidden lg:block">
                <ProductAccordion product={product} />
             </div>
           </div>
 
-          {/* --- RIGHT COLUMN: PRODUCT DETAILS --- */}
+          {/* --- RIGHT COLUMN: PRODUCT INFO & ACTION --- */}
           <div className="lg:col-span-7 flex flex-col">
             <nav className="flex items-center gap-2 text-[10px] font-black uppercase mb-4 text-gray-400 italic tracking-widest">
                 <Link href="/" className="hover:text-black">Vault</Link> <ChevronRight size={10}/> <span className="text-black underline decoration-jungli-orange">{product.name}</span>
             </nav>
 
             <p className="text-xs font-black text-gray-400 uppercase italic mb-1 tracking-[0.2em]">{product.brand}</p>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-[1000] uppercase italic tracking-tighter leading-[0.9] mb-6 text-black">{product.name}</h1>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-[1000] uppercase italic tracking-tighter leading-[0.85] mb-6 text-black">{product.name}</h1>
             
             <div className="flex items-baseline gap-4 mb-8">
                 <span className="text-4xl md:text-5xl font-[1000] text-black italic tracking-tighter leading-none">₹{product.jungli_price.toLocaleString()}</span>
@@ -218,40 +246,53 @@ export default function ProductPage() {
             </div>
 
             {/* SIZE SELECTOR */}
-            <div className="mb-8">
+            <div className="mb-10">
                 <div className="flex justify-between items-end mb-4">
-                    <span className="font-black uppercase italic text-[10px] bg-black text-white px-2 py-0.5">Select Size (UK)</span>
-                    <span className="text-[9px] font-black uppercase underline cursor-pointer hover:text-jungli-orange">Size Info</span>
+                    <span className="font-black uppercase italic text-[10px] bg-black text-white px-2 py-0.5 tracking-widest leading-none">Select Size (UK)</span>
+                    <span className="text-[9px] font-black uppercase underline cursor-pointer hover:text-jungli-orange transition-colors">Size Info</span>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                     {(product.available_sizes || []).map((size: string) => (
-                        <button key={size} onClick={() => { setSelectedSize(size); setShowError(false); }} className={`py-4 border-4 border-black font-[1000] text-base transition-all italic ${selectedSize === size ? 'bg-jungli-orange text-white translate-x-1 shadow-none' : 'bg-white text-black shadow-brutal-sm hover:bg-yellow-400'}`}>{size}</button>
+                        <button key={size} onClick={() => { setSelectedSize(size); setShowError(false); }} className={`py-4 border-4 border-black font-[1000] text-lg transition-all italic ${selectedSize === size ? 'bg-jungli-orange text-white translate-x-1 shadow-none' : 'bg-white text-black shadow-brutal-sm hover:bg-yellow-400'}`}>{size}</button>
                     ))}
                 </div>
-                {showError && <motion.p initial={{ x: -10 }} animate={{ x: 0 }} className="text-red-600 font-black uppercase text-[10px] mt-4 flex items-center gap-2"><AlertTriangle size={14}/> CHOOSE SIZE</motion.p>}
+                {showError && <motion.p initial={{ x: -10 }} animate={{ x: 0 }} className="text-red-600 font-black uppercase text-[10px] mt-4 flex items-center gap-2"><AlertTriangle size={14}/> CHOOSE SIZE TO PROCEED</motion.p>}
             </div>
 
-            {/* DYNAMIC MAIN BUTTON (BUY vs NOTIFY) */}
+            {/* STOCK PULSE TRIGGER */}
+            {product.is_available && (
+              <div className="flex items-center gap-2 mb-6 p-3 bg-orange-50 border-2 border-dashed border-jungli-orange w-full">
+                <div className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-jungli-orange opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-jungli-orange"></span>
+                </div>
+                <p className="text-[10px] font-black uppercase italic text-black leading-none">
+                  {product.tag === 'SELLING FAST' ? "ONLY 4 PAIRS LEFT IN THIS BATCH!" : "DEMAND IS EXTREMELY HIGH FOR THIS SIZE"}
+                </p>
+              </div>
+            )}
+
+            {/* ACTION BUTTON (Dynamic BUY vs NOTIFY) */}
             {product.is_available ? (
-                <button onClick={handleAddToCart} className="w-full text-white text-2xl font-[1000] py-6 border-4 border-black shadow-brutal transition-all uppercase italic mb-8 bg-black active:scale-95 flex items-center justify-center gap-4 group">
+                <button onClick={handleAddToCart} className="w-full text-white text-3xl font-[1000] py-8 border-4 border-black shadow-brutal transition-all uppercase italic mb-8 bg-black active:scale-95 flex items-center justify-center gap-4 group">
                     <ShoppingCart size={24} className="group-hover:translate-y-[-2px] transition-transform" /> BUY NOW
                 </button>
             ) : (
                 <button 
                   onClick={handleNotifyMe} 
                   disabled={isNotified || isSubmittingNotify} 
-                  className={`w-full py-6 border-4 border-black font-[1000] text-2xl uppercase italic mb-8 shadow-brutal transition-all flex items-center justify-center gap-4 ${isNotified ? 'bg-green-500 text-black shadow-none' : 'bg-white text-black hover:bg-black hover:text-white'}`}
+                  className={`w-full py-8 border-4 border-black font-[1000] text-3xl uppercase italic mb-8 shadow-brutal transition-all flex items-center justify-center gap-4 ${isNotified ? 'bg-green-500 text-black shadow-none translate-x-1' : 'bg-white text-black hover:bg-black hover:text-white'}`}
                 >
                     {isSubmittingNotify ? <Loader2 className="animate-spin" /> : <>
-                      <motion.div animate={isNotified ? { rotate: [0, 20, -20, 0] } : {}} transition={{ duration: 0.5 }}>
-                        <Bell fill={isNotified ? "black" : "none"} size={24} />
+                      <motion.div animate={isNotified ? { rotate: [0, 20, -20, 20, -20, 0] } : {}} transition={{ duration: 0.5 }}>
+                        <Bell fill={isNotified ? "black" : "none"} size={32} />
                       </motion.div>
                       {isNotified ? "STASH ALERT SET!" : "NOTIFY ME"}
                     </>}
                 </button>
             )}
 
-            {/* MOBILE ACCORDION: Shows below button on small screens */}
+            {/* MOBILE ACCORDION (Hidden on Desktop) */}
             <div className="lg:hidden mt-8">
                <ProductAccordion product={product} />
             </div>
@@ -265,7 +306,7 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* 3. INFINITE SLIDER */}
+        {/* RELATED PRODUCTS SLIDER */}
         <div className="mt-20">
           <RelatedSlider currentProductId={product.id} />
         </div>
