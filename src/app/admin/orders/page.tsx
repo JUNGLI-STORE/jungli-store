@@ -33,7 +33,7 @@ export default function AdminOrders() {
   }, [router]);
 
   async function fetchOrders() {
-    // Fetch everything, including the new is_archived column
+    // Fetch everything, including is_archived and is_verified
     const { data, error } = await supabase
       .from('orders')
       .select('*')
@@ -55,7 +55,21 @@ export default function AdminOrders() {
     }
   };
 
-  // 2. SOFT DELETE (Move to History)
+  // 2. VERIFY COD ORDER (NEW)
+  const verifyOrder = async (orderId: string) => {
+    if(!confirm("Confirm that you have spoken to the customer?")) return;
+    
+    const { error } = await supabase
+      .from('orders')
+      .update({ is_verified: true, status: 'verified_cod' }) 
+      .eq('id', orderId);
+
+    if (!error) {
+        setOrders(orders.map(o => o.id === orderId ? {...o, is_verified: true, status: 'verified_cod'} : o));
+    }
+  };
+
+  // 3. SOFT DELETE (Move to History)
   const archiveOrder = async (orderId: string) => {
     if(!confirm("Move to History? This hides it from the main list.")) return;
 
@@ -69,7 +83,7 @@ export default function AdminOrders() {
     }
   };
 
-  // 3. HARD DELETE (Permanent Delete from History)
+  // 4. HARD DELETE (Permanent Delete)
   const deletePermanently = async (orderId: string) => {
     if(!confirm("⚠️ PERMANENT DELETE: This cannot be undone. Are you sure?")) return;
 
@@ -80,7 +94,7 @@ export default function AdminOrders() {
     }
   };
 
-  // 4. FILTERING LOGIC
+  // 5. FILTERING LOGIC
   const getFilteredOrders = () => {
     // First, filter by Search Term
     let filtered = orders.filter(o => 
@@ -95,7 +109,7 @@ export default function AdminOrders() {
         return filtered.filter(o => o.is_archived === true);
     } 
     
-    // For all other tabs, we exclude archived orders
+    // For all other tabs, exclude archived
     filtered = filtered.filter(o => o.is_archived === false);
 
     switch (activeTab) {
@@ -111,7 +125,6 @@ export default function AdminOrders() {
 
   const displayOrders = getFilteredOrders();
 
-  // Helper for Tab Styling
   const TabButton = ({ id, label, color, count }: any) => (
     <button 
       onClick={() => setActiveTab(id)}
@@ -154,16 +167,15 @@ export default function AdminOrders() {
           </div>
         </div>
 
-        {/* TABS NAVIGATION */}
+        {/* TABS */}
         <div className="flex overflow-x-auto border-4 border-black mb-10 bg-white custom-scrollbar">
             <TabButton id="all" label="All Active" color="gray" count={orders.filter(o => !o.is_archived).length} />
             <TabButton id="paid" label="Paid (UPI)" color="green" count={orders.filter(o => !o.is_archived && o.payment_method === 'UPI').length} />
-            <TabButton id="cod" label="COD Pending" color="yellow" count={orders.filter(o => !o.is_archived && o.payment_method === 'COD').length} />
+            <TabButton id="cod" label="COD Ops" color="yellow" count={orders.filter(o => !o.is_archived && o.payment_method === 'COD').length} />
             <TabButton id="shipped" label="Shipped" color="blue" count={orders.filter(o => !o.is_archived && o.status === 'shipped').length} />
             <TabButton id="delivered" label="Delivered" color="green" count={orders.filter(o => !o.is_archived && o.status === 'delivered').length} />
             <TabButton id="cancelled" label="Cancelled" color="red" count={orders.filter(o => !o.is_archived && o.status === 'cancelled').length} />
             
-            {/* History Tab - Distinct Look */}
             <button 
               onClick={() => setActiveTab('history')}
               className={`flex items-center gap-2 px-6 py-3 font-[1000] uppercase italic text-xs md:text-sm transition-all ml-auto flex-shrink-0
@@ -193,7 +205,7 @@ export default function AdminOrders() {
                     ${activeTab === 'history' ? 'opacity-70 grayscale hover:grayscale-0 transition-all' : ''}
                   `}
                 >
-                  {/* --- HISTORY DELETE BUTTON (Top Right) --- */}
+                  {/* --- HISTORY / ARCHIVE BUTTON --- */}
                   {activeTab === 'history' ? (
                       <button 
                         onClick={() => deletePermanently(order.id)}
@@ -203,7 +215,6 @@ export default function AdminOrders() {
                         <X size={24} strokeWidth={3} />
                       </button>
                   ) : (
-                      // --- MOVE TO HISTORY BUTTON (Top Right) ---
                       <button 
                         onClick={() => archiveOrder(order.id)}
                         className="absolute top-0 right-0 bg-gray-200 text-gray-500 p-2 border-l-4 border-b-4 border-black hover:bg-black hover:text-white z-10 transition-colors"
@@ -213,17 +224,20 @@ export default function AdminOrders() {
                       </button>
                   )}
 
-                  {/* STATUS BADGE (Top Left) */}
+                  {/* STATUS BADGE */}
                   <div className={`absolute top-0 left-0 px-4 py-1 font-[1000] uppercase italic border-r-4 border-b-4 border-black text-[10px] tracking-widest
                     ${order.status === 'paid' ? 'bg-green-400' : 
                       order.status === 'pending_cod' ? 'bg-yellow-400' : 
+                      order.status === 'verified_cod' ? 'bg-purple-600 text-white' :
                       order.status === 'shipped' ? 'bg-blue-400 text-white' : 
                       order.status === 'cancelled' ? 'bg-red-600 text-white' :
                       'bg-black text-white'}`}>
-                    {order.status === 'pending_cod' ? 'COD PENDING' : order.status}
+                    {order.status === 'pending_cod' ? 'COD PENDING' : 
+                     order.status === 'verified_cod' ? 'VERIFIED COD' :
+                     order.status}
                   </div>
 
-                  {/* 1. CUSTOMER INFO */}
+                  {/* CUSTOMER INFO */}
                   <div className="flex-1 space-y-4 pt-6">
                     <div>
                         <h3 className="text-3xl font-[1000] uppercase italic leading-none text-black">{order.customer_name}</h3>
@@ -249,7 +263,7 @@ export default function AdminOrders() {
                     </div>
                   </div>
 
-                  {/* 2. ORDER ITEMS */}
+                  {/* ORDER ITEMS */}
                   <div className="flex-1 lg:border-l-4 lg:border-dashed border-black lg:pl-8 pt-4 lg:pt-0">
                     <p className="font-black uppercase italic text-[10px] text-gray-400 mb-4 tracking-widest">Manifest ({order.items?.length})</p>
                     <div className="space-y-3">
@@ -274,12 +288,22 @@ export default function AdminOrders() {
                     <p className="text-[9px] font-bold text-gray-400 uppercase mt-1">Payment: {order.payment_method} | ID: {order.payment_id}</p>
                   </div>
 
-                  {/* 3. ACTIONS (Hidden if in History) */}
+                  {/* ACTIONS (Hidden in History) */}
                   {activeTab !== 'history' && (
                       <div className="flex flex-col gap-2 justify-center min-w-[180px] pt-4 lg:pt-0 border-t-4 lg:border-t-0 lg:border-l-4 border-black">
                         
-                        {/* SHIP */}
-                        {order.status !== 'shipped' && order.status !== 'delivered' && order.status !== 'cancelled' && (
+                        {/* --- NEW: VERIFY COD BUTTON --- */}
+                        {order.payment_method === 'COD' && !order.is_verified && (
+                            <button 
+                            onClick={() => verifyOrder(order.id)}
+                            className="bg-purple-600 text-white py-3 border-2 border-black font-black uppercase italic text-xs shadow-brutal-sm hover:translate-x-1 transition-all flex items-center justify-center gap-2"
+                            >
+                            <CheckCircle size={16} /> Verify Order
+                            </button>
+                        )}
+
+                        {/* SHIP (Only if Paid OR Verified COD) */}
+                        {(order.status === 'paid' || order.status === 'verified_cod') && (
                             <button 
                             onClick={() => updateStatus(order.id, 'shipped')}
                             className="bg-blue-600 text-white py-3 border-2 border-black font-black uppercase italic text-xs shadow-brutal-sm hover:translate-x-1 transition-all flex items-center justify-center gap-2"

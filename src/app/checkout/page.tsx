@@ -118,6 +118,7 @@ export default function CheckoutPage() {
               items: cart,
               status: 'paid',
               payment_method: 'UPI',
+              is_verified: true, // ✅ UPI IS AUTO-VERIFIED
               applied_promo: activeHunterCode
             }]);
 
@@ -165,6 +166,7 @@ export default function CheckoutPage() {
         items: cart,
         status: 'pending_cod',
         payment_method: 'COD',
+        is_verified: false, // ❌ COD REQUIRES MANUAL VERIFICATION
         applied_promo: activeHunterCode
       }]);
 

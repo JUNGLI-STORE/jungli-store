@@ -14,7 +14,7 @@ export default function ReviewsWidget() {
   const shouldShow = pathname === "/" || pathname?.startsWith("/shop/");
 
   useEffect(() => {
-    if (isOpen && reviews.length === 0) {
+    if (isOpen && reviews.length === 0) {  
       async function fetch() {
         setLoading(true);
         const { data } = await supabase.from('site_reviews').select('*').order('created_at', { ascending: false });

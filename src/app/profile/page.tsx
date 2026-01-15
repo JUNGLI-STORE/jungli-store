@@ -30,12 +30,11 @@ export default function ProfilePage() {
           .from('profiles')
           .select('*')
           .eq('id', authUser.id)
-          .maybeSingle(); // Prevents crashing if profile doesn't exist yet
+          .maybeSingle(); 
 
         if (profileData) {
           setProfile(profileData);
         } else {
-          // Default values if profile is missing
           setProfile({ 
             username: authUser.email?.split('@')[0] || "hunter", 
             full_name: "" 
@@ -169,25 +168,38 @@ export default function ProfilePage() {
                             <div className="flex flex-col md:flex-row justify-between gap-6">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-4">
-                                    <span className={`px-3 py-1 border-2 border-black font-black uppercase text-[10px] italic shadow-brutal-sm ${order.status === 'paid' ? 'bg-green-400' : 'bg-blue-400'}`}>
-                                        {order.status}
+                                    <span className={`px-3 py-1 border-2 border-black font-black uppercase text-[10px] italic shadow-brutal-sm 
+                                      ${order.status === 'paid' ? 'bg-green-400' : 
+                                        order.status === 'verified_cod' ? 'bg-purple-600 text-white' :
+                                        order.status === 'pending_cod' ? 'bg-yellow-400' :
+                                        'bg-blue-400 text-white'}`}>
+                                        {order.status === 'pending_cod' ? 'COD PENDING' : 
+                                         order.status === 'verified_cod' ? 'VERIFIED COD' : 
+                                         order.status}
                                     </span>
                                     <p className="text-[10px] font-bold text-gray-400 uppercase italic">#{order.payment_id?.slice(-8)}</p>
                                 </div>
                                 <h4 className="text-2xl font-[1000] uppercase italic leading-none mb-6 text-black tracking-tighter">₹{order.total_amount.toLocaleString()}</h4>
                                 
-                                {/* TRACKING VISUALIZER */}
+                                {/* TRACKING VISUALIZER (UPDATED LOGIC) */}
                                 <div className="flex items-center gap-2 max-w-xs">
-                                    <div className="h-4 w-4 rounded-full border-2 border-black bg-black" />
+                                    {/* 1. Verified Dot */}
+                                    <div className={`h-4 w-4 rounded-full border-2 border-black ${order.is_verified ? 'bg-black' : 'bg-white'}`} />
+                                    
                                     <div className="h-1 flex-1 bg-black" />
-                                    <div className={`h-4 w-4 rounded-full border-2 border-black ${order.status !== 'paid' ? 'bg-black' : 'bg-gray-100'}`} />
+                                    
+                                    {/* 2. On Road Dot */}
+                                    <div className={`h-4 w-4 rounded-full border-2 border-black ${order.status === 'shipped' || order.status === 'delivered' ? 'bg-black' : 'bg-gray-100'}`} />
+                                    
                                     <div className={`h-1 flex-1 ${order.status === 'delivered' ? 'bg-black' : 'bg-gray-100'}`} />
+                                    
+                                    {/* 3. Stashed (Delivered) Dot */}
                                     <div className={`h-4 w-4 rounded-full border-2 border-black ${order.status === 'delivered' ? 'bg-black' : 'bg-gray-100'}`} />
                                 </div>
                                 <div className="flex justify-between max-w-xs mt-2 text-[8px] font-black uppercase italic text-gray-500">
-                                    <span>Verified</span>
-                                    <span className="ml-4">On Road</span>
-                                    <span>Stashed</span>
+                                    <span className={order.is_verified ? "text-black" : ""}>Verified</span>
+                                    <span className={order.status === 'shipped' ? "text-black" : "ml-4"}>On Road</span>
+                                    <span className={order.status === 'delivered' ? "text-black" : ""}>Stashed</span>
                                 </div>
                               </div>
                               
