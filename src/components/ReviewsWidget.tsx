@@ -3,19 +3,16 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, X, CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { usePathname } from "next/navigation"; // 1. Import Pathname Hook
+import { usePathname } from "next/navigation";
 
 export default function ReviewsWidget() {
-  const pathname = usePathname(); // 2. Get current path
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 3. CONDITIONAL RENDERING LOGIC
-  // Only show on Home ('/') OR Product Pages (starts with '/shop/')
   const shouldShow = pathname === "/" || pathname?.startsWith("/shop/");
 
-  // Fetch reviews when the modal opens
   useEffect(() => {
     if (isOpen && reviews.length === 0) {
       async function fetch() {
@@ -28,12 +25,10 @@ export default function ReviewsWidget() {
     }
   }, [isOpen]);
 
-  // 4. If not on the right page, render nothing
   if (!shouldShow) return null;
 
   return (
     <>
-      {/* 1. THE FLOATING BUTTON (Right Edge) */}
       <motion.button
         initial={{ x: 100 }}
         animate={{ x: 0 }}
@@ -47,12 +42,10 @@ export default function ReviewsWidget() {
         </div>
       </motion.button>
 
-      {/* 2. THE MODAL OVERLAY */}
       <AnimatePresence>
         {isOpen && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             
-            {/* Backdrop */}
             <motion.div 
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
@@ -61,14 +54,12 @@ export default function ReviewsWidget() {
                 className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             />
 
-            {/* Modal Content */}
             <motion.div 
                 initial={{ scale: 0.9, opacity: 0, y: 50 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.9, opacity: 0, y: 50 }}
-                className="relative bg-white w-full max-w-5xl h-[80vh] flex flex-col border-8 border-black shadow-[20px_20px_0px_#FF5F1F]"
+                className="relative bg-white w-full max-w-5xl h-[85vh] flex flex-col border-8 border-black shadow-[20px_20px_0px_#FF5F1F]"
             >
-                {/* Header (Red like screenshot) */}
                 <div className="bg-red-600 text-white p-6 border-b-4 border-black flex justify-between items-center">
                     <div className="flex items-center gap-3">
                          <div className="bg-white text-red-600 p-2 border-2 border-black rotate-[-5deg]">
@@ -84,7 +75,6 @@ export default function ReviewsWidget() {
                     </button>
                 </div>
 
-                {/* Scrollable Grid */}
                 <div className="flex-1 overflow-y-auto p-6 bg-gray-100 custom-scrollbar">
                     {loading ? (
                         <div className="h-full flex items-center justify-center">
@@ -94,31 +84,35 @@ export default function ReviewsWidget() {
                         <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
                             {reviews.map((review) => (
                                 <div key={review.id} className="break-inside-avoid bg-white border-4 border-black p-4 shadow-brutal-sm hover:scale-[1.02] transition-transform">
-                                    {/* Review Image */}
+                                    
+                                    {/* --- IMAGE FIX --- */}
                                     {review.image_url && (
-                                        <div className="w-full aspect-square bg-gray-200 border-2 border-black mb-4 overflow-hidden relative">
-                                            <img src={review.image_url} alt="Customer" className="w-full h-full object-cover" />
-                                            {review.product_name && (
-                                                <span className="absolute bottom-2 left-2 bg-black text-white text-[8px] font-black uppercase px-2 py-1">
-                                                    {review.product_name}
-                                                </span>
-                                            )}
+                                        <div className="w-full bg-gray-100 border-2 border-black mb-4 overflow-hidden flex items-center justify-center">
+                                            {/* Changed to object-contain and removed strict aspect ratio forcing so tall images show fully */}
+                                            <img 
+                                              src={review.image_url} 
+                                              alt="Customer" 
+                                              className="w-full h-auto object-contain max-h-[400px]" 
+                                            />
                                         </div>
                                     )}
 
-                                    {/* Stars */}
+                                    {review.product_name && (
+                                        <span className="block mb-2 text-[10px] font-black uppercase bg-black text-white px-2 py-1 w-fit">
+                                            {review.product_name}
+                                        </span>
+                                    )}
+
                                     <div className="flex text-yellow-400 mb-2">
                                         {[...Array(review.rating || 5)].map((_, i) => (
                                             <Star key={i} size={16} fill="currentColor" />
                                         ))}
                                     </div>
 
-                                    {/* Text */}
-                                    <p className="font-bold text-sm italic text-gray-700 mb-4 leading-relaxed">
+                                    <p className="font-bold text-sm italic text-gray-700 mb-4 leading-relaxed whitespace-pre-wrap">
                                         "{review.comment}"
                                     </p>
 
-                                    {/* Footer */}
                                     <div className="flex items-center justify-between border-t-2 border-dashed border-gray-300 pt-3">
                                         <h4 className="font-[1000] uppercase italic text-sm">{review.customer_name}</h4>
                                         {review.is_verified && (
