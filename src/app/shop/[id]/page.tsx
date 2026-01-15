@@ -6,8 +6,8 @@ import RelatedSlider from '@/components/RelatedSlider';
 import { 
   ChevronRight, ShieldCheck, Truck, RotateCcw, 
   AlertTriangle, Loader2, Play, Info, 
-  Image as ImageIcon, Star, Quote, Lock, X, Maximize2, Bell, Zap, ShoppingCart
-} from 'lucide-react';
+  Image as ImageIcon, Star, Quote, Lock, X, Maximize2, Bell, Zap, ShoppingCart, MessageCircle, Phone 
+} from 'lucide-react'; // Added Phone
 import { useCart } from '@/context/CartContext';
 import { useParams, useRouter } from 'next/navigation'; 
 import { supabase } from '@/lib/supabase'; 
@@ -191,7 +191,7 @@ export default function ProductPage() {
                     <motion.img 
                       key={activeMedia.url} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                       src={activeMedia.url} 
-                      className="w-full h-full object-contain p-8" // FIXED: Full Visibility
+                      className="w-full h-full object-contain p-8"
                       alt=""
                       onError={(e) => {(e.target as HTMLImageElement).src = "https://placehold.co/800x800/000000/FFFFFF/png?text=STASH+LOADING"}}
                     />
@@ -225,7 +225,7 @@ export default function ProductPage() {
               </div>
             </div>
 
-            {/* ✅ DESKTOP ACCORDION: LHS placement to fill space */}
+            {/* ✅ DESKTOP ACCORDION */}
             <div className="hidden lg:block">
                <ProductAccordion product={product} />
             </div>
@@ -259,18 +259,36 @@ export default function ProductPage() {
                 {showError && <motion.p initial={{ x: -10 }} animate={{ x: 0 }} className="text-red-600 font-black uppercase text-[10px] mt-4 flex items-center gap-2"><AlertTriangle size={14}/> CHOOSE SIZE TO PROCEED</motion.p>}
             </div>
 
-            {/* STOCK PULSE TRIGGER */}
-            {product.is_available && (
-              <div className="flex items-center gap-2 mb-6 p-3 bg-orange-50 border-2 border-dashed border-jungli-orange w-full">
-                <div className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-jungli-orange opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-jungli-orange"></span>
+            {/* --- CUSTOM ORDER / HELP BOX (WhatsApp Integrated) --- */}
+            <div className="mb-8 border-4 border-black border-dashed p-5 bg-yellow-50 relative group">
+                {/* STICKER: COMPOSITE ICON */}
+                <div className="absolute -top-3 -right-3 bg-[#25D366] text-white p-2 border-2 border-black rotate-12 shadow-brutal-sm">
+                    <div className="relative flex items-center justify-center w-6 h-6">
+                        <MessageCircle size={24} strokeWidth={1.5} className="mb-0.5" />
+                        <Phone size={10} className="absolute mb-[1px] ml-[1px] fill-current" strokeWidth={2.5} />
+                    </div>
                 </div>
-                <p className="text-[10px] font-black uppercase italic text-black leading-none">
-                  {product.tag === 'SELLING FAST' ? "ONLY 4 PAIRS LEFT IN THIS BATCH!" : "DEMAND IS EXTREMELY HIGH FOR THIS SIZE"}
+                
+                <h4 className="font-[1000] uppercase italic text-xl mb-2 flex items-center gap-2">
+                    WHAT'S IN YOUR MIND?
+                </h4>
+                <p className="font-bold text-[10px] uppercase text-gray-600 leading-relaxed mb-4">
+                    Hunting for a different colorway? Can't find a rare design? Need a bulk order for your squad? 
+                    The Jungle has deep connections. Tell us know what you need.
                 </p>
-              </div>
-            )}
+                <a 
+                    href={`https://wa.me/919713524844?text=Hey Jungli Team, regarding ${product.name} (ID: ${product.id}): I have a custom query...`}
+                    target="_blank"
+                    className="flex items-center justify-center gap-2 w-full bg-[#25D366] text-black font-[1000] py-3 border-2 border-black shadow-brutal-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all uppercase italic text-xs hover:bg-white"
+                >
+                    {/* BUTTON ICON: COMPOSITE ICON */}
+                    <div className="relative flex items-center justify-center w-5 h-5">
+                        <MessageCircle size={20} strokeWidth={1.5} className="mb-0.5" />
+                        <Phone size={8} className="absolute mb-[1px] ml-[1px] fill-current" strokeWidth={2.5} />
+                    </div>
+                    Chat directly on WhatsApp
+                </a>
+            </div>
 
             {/* ACTION BUTTON (Dynamic BUY vs NOTIFY) */}
             {product.is_available ? (

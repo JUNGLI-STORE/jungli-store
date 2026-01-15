@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import CartSidebar from "@/components/CartSidebar";
 import PreLoader from "@/components/PreLoader";
 import Footer from "@/components/Footer";
+import ReviewsWidget from "@/components/ReviewsWidget"; // 👈 IMPORTED WIDGET
 
 // 1. IMPORT TRACKING ENGINES
 import { Analytics } from "@vercel/analytics/react";
@@ -45,6 +46,7 @@ export default function RootLayout({
           async
           src="https://cloud.umami.is/script.js"
           data-website-id="625671e3-daf8-450c-b0a7-35bd284214e5"
+          strategy="afterInteractive" 
         />
       </head>
       <body
@@ -63,6 +65,9 @@ export default function RootLayout({
 
           <CartSidebar />
           
+          {/* THE NEW FLOATING REVIEWS WIDGET */}
+          <ReviewsWidget />
+
           {/* 3. VERCEL TRACKING ENGINES */}
           <Analytics />
           <SpeedInsights />
