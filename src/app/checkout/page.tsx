@@ -241,7 +241,7 @@ export default function CheckoutPage() {
                     )}
                     
                     {hunterDiscount > 0 && (
-                       /* --- CHANGED TO GREEN STYLE HERE --- */
+                       /* --- NOW GREEN FOR SUCCESSFUL APPLIED CODE --- */
                        <div className="flex justify-between items-center text-sm md:text-base text-green-600 bg-green-50 px-2 py-1">
                            <span className="font-[1000] uppercase italic">Hunter Credit Applied</span>
                            <span className="font-[1000]">- ₹{hunterDiscount}</span>

@@ -3,11 +3,17 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, X, CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { usePathname } from "next/navigation"; // 1. Import Pathname Hook
 
 export default function ReviewsWidget() {
+  const pathname = usePathname(); // 2. Get current path
   const [isOpen, setIsOpen] = useState(false);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 3. CONDITIONAL RENDERING LOGIC
+  // Only show on Home ('/') OR Product Pages (starts with '/shop/')
+  const shouldShow = pathname === "/" || pathname?.startsWith("/shop/");
 
   // Fetch reviews when the modal opens
   useEffect(() => {
@@ -21,6 +27,9 @@ export default function ReviewsWidget() {
       fetch();
     }
   }, [isOpen]);
+
+  // 4. If not on the right page, render nothing
+  if (!shouldShow) return null;
 
   return (
     <>

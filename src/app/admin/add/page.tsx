@@ -18,7 +18,7 @@ function AddProductForm() {
   const [loading, setLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // 1. UPDATED FORM STATE (Includes Build Intel & Quality Points)
+  // 1. UPDATED FORM STATE
   const [formData, setFormData] = useState({
     name: "",
     brand: "",
@@ -27,15 +27,17 @@ function AddProductForm() {
     jungli_price: "",
     tag: "NEW DROP",
     description: "",
-    // NEW Technical Specs
     material_upper: "Master-Grade Tech Skin",
     material_lining: "Sweat-Wick Technical Mesh",
     material_sole: "High-Grip TPR Unit",
-    quality_points: "", // One point per line
+    quality_points: "", 
     available_sizes: ["UK 6", "UK 7", "UK 8", "UK 9", "UK 10", "UK 11"]
   });
 
+  // Image State
   const [imageItems, setImageItems] = useState<{ id: string; file?: File; url: string }[]>([]);
+  
+  // 2. NEW VIDEO STATE
   const [videoFiles, setVideoFiles] = useState<{ id: string; file?: File; url: string }[]>([]);
 
   const ADMIN_EMAIL = "2.0dandotiya@gmail.com"; 
@@ -65,7 +67,11 @@ function AddProductForm() {
               quality_points: (original.bullet_points || []).join('\n'),
               available_sizes: original.available_sizes || []
             });
+            
+            // Load Images
             if (original.images) setImageItems(original.images.map((url: string) => ({ id: Math.random().toString(), url })));
+            
+            // Load Videos (NEW)
             if (original.video_urls) setVideoFiles(original.video_urls.map((url: string) => ({ id: Math.random().toString(), url })));
           }
         }
@@ -76,47 +82,50 @@ function AddProductForm() {
 
   const handleLaunch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (imageItems.length === 0) return alert("IMAGE REQUIRED!");
+    if (imageItems.length === 0) return alert("AT LEAST 1 IMAGE REQUIRED!");
     setLoading(true);
 
     try {
+      // 1. Upload Images
       const finalImageUrls = [];
       for (const item of imageItems) {
         if (item.file) {
           const path = `images/${Date.now()}-${item.file.name}`;
           await supabase.storage.from('sneaker-assets').upload(path, item.file);
-          finalImageUrls.push(supabase.storage.from('sneaker-assets').getPublicUrl(path).data.publicUrl);
+          const { data } = supabase.storage.from('sneaker-assets').getPublicUrl(path);
+          finalImageUrls.push(data.publicUrl);
         } else {
           finalImageUrls.push(item.url); 
         }
       }
 
+      // 2. Upload Videos (NEW)
       const finalVideoUrls = [];
       for (const item of videoFiles) {
         if (item.file) {
           const path = `videos/${Date.now()}-${item.file.name}`;
           await supabase.storage.from('sneaker-assets').upload(path, item.file);
-          finalVideoUrls.push(supabase.storage.from('sneaker-assets').getPublicUrl(path).data.publicUrl);
+          const { data } = supabase.storage.from('sneaker-assets').getPublicUrl(path);
+          finalVideoUrls.push(data.publicUrl);
         } else {
           finalVideoUrls.push(item.url);
         }
       }
 
-      // 2. PREPARE PAYLOAD (Syncing separate inputs to the Database Columns)
+      // 3. Prepare Payload
       const productData = {
         name: formData.name.toUpperCase(),
         brand: formData.brand.toUpperCase(),
         model_group: formData.model_group.toLowerCase().replace(/\s+/g, '-'),
         luxury_price: Number(formData.luxury_price),
         jungli_price: Number(formData.jungli_price),
-        image_url: finalImageUrls[0],
+        image_url: finalImageUrls[0], // First image is cover
         images: finalImageUrls,
-        video_urls: finalVideoUrls,
+        video_urls: finalVideoUrls, // Save video array
         tag: formData.tag.toUpperCase(),
         description: formData.description,
         is_available: true,
         available_sizes: formData.available_sizes,
-        // Save to JSONB and Array columns
         materials_json: {
             upper: formData.material_upper,
             footbed: formData.material_lining,
@@ -133,8 +142,12 @@ function AddProductForm() {
 
       alert("STASH UPDATED! 🔥");
       router.push('/admin/inventory');
-    } catch (err: any) { alert(err.message); }
-    finally { setLoading(false); }
+    } catch (err: any) { 
+        console.error(err);
+        alert(err.message); 
+    } finally { 
+        setLoading(false); 
+    }
   };
 
   if (!isAdmin) return null;
@@ -151,10 +164,10 @@ function AddProductForm() {
              {editId ? 'EDIT' : 'ADD'} <span className="text-jungli-orange">STASH</span>
           </h1>
 
-          {/* DRAGGABLE GALLERY */}
-          <div className="mb-16">
+          {/* 1. IMAGE SEQUENCE */}
+          <div className="mb-12">
             <label className="block font-black uppercase italic mb-4 text-sm bg-black text-white inline-block px-2 italic">1. Image Sequence</label>
-            <Reorder.Group axis="x" values={imageItems} onReorder={setImageItems} className="flex gap-4 overflow-x-auto p-6 bg-gray-50 border-4 border-black border-dashed rounded-none">
+            <Reorder.Group axis="x" values={imageItems} onReorder={setImageItems} className="flex gap-4 overflow-x-auto p-6 bg-gray-50 border-4 border-black border-dashed rounded-none custom-scrollbar">
               {imageItems.map((item) => (
                 <Reorder.Item key={item.id} value={item} className="relative w-40 h-40 bg-white border-4 border-black shadow-brutal-sm cursor-grab active:cursor-grabbing flex-shrink-0 group">
                   <img src={item.url} className="w-full h-full object-contain p-2" alt="" />
@@ -165,8 +178,10 @@ function AddProductForm() {
                   <GripVertical className="absolute bottom-1 right-1 text-gray-300" size={16} />
                 </Reorder.Item>
               ))}
-              <label className="w-40 h-40 border-4 border-dashed border-gray-300 flex flex-col items-center justify-center hover:bg-yellow-50 hover:border-black cursor-pointer transition-all">
-                <Plus size={32} className="text-gray-300" /><input type="file" multiple className="hidden" onChange={(e) => {
+              <label className="w-40 h-40 border-4 border-dashed border-gray-300 flex flex-col items-center justify-center hover:bg-yellow-50 hover:border-black cursor-pointer transition-all flex-shrink-0">
+                <Plus size={32} className="text-gray-300" />
+                <span className="font-black text-[10px] uppercase text-gray-400 mt-2">Add Photos</span>
+                <input type="file" multiple className="hidden" onChange={(e) => {
                   const files = Array.from(e.target.files || []);
                   const newItems = files.map(f => ({ id: Math.random().toString(), file: f, url: URL.createObjectURL(f) }));
                   setImageItems([...imageItems, ...newItems]);
@@ -175,6 +190,32 @@ function AddProductForm() {
             </Reorder.Group>
           </div>
 
+          {/* 2. VIDEO EVIDENCE (NEW SECTION) */}
+          <div className="mb-16">
+            <label className="block font-black uppercase italic mb-4 text-sm bg-jungli-orange text-white inline-block px-2 italic">2. Video Evidence (Optional)</label>
+            <div className="flex gap-4 overflow-x-auto p-6 bg-gray-50 border-4 border-black border-dashed rounded-none custom-scrollbar">
+              {videoFiles.map((item) => (
+                <div key={item.id} className="relative w-40 h-40 bg-black border-4 border-black shadow-brutal-sm flex-shrink-0 group">
+                  <video src={item.url} className="w-full h-full object-cover opacity-80" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                      <Play fill="white" className="text-white" />
+                  </div>
+                  <button type="button" onClick={() => setVideoFiles(prev => prev.filter(i => i.id !== item.id))} className="absolute -top-2 -right-2 bg-red-600 text-white p-1 border-2 border-black z-10"><X size={14} /></button>
+                </div>
+              ))}
+              <label className="w-40 h-40 border-4 border-dashed border-gray-300 flex flex-col items-center justify-center hover:bg-red-50 hover:border-red-500 cursor-pointer transition-all flex-shrink-0">
+                <Video size={32} className="text-gray-300" />
+                <span className="font-black text-[10px] uppercase text-gray-400 mt-2">Add Video</span>
+                <input type="file" multiple className="hidden" onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  const newItems = files.map(f => ({ id: Math.random().toString(), file: f, url: URL.createObjectURL(f) }));
+                  setVideoFiles([...videoFiles, ...newItems]);
+                }} accept="video/*" />
+              </label>
+            </div>
+          </div>
+
+          {/* 3. DATA FIELDS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
             <div className="space-y-10">
               {/* TAGS */}
@@ -186,10 +227,12 @@ function AddProductForm() {
                       <option value="FINAL BATCH">FINAL BATCH</option>
                       <option value="LIMITED EDITION">LIMITED EDITION</option>
                       <option value="1:1 QUALITY">1:1 QUALITY</option>
+                      <option value="GRAIL">GRAIL</option>
+                      <option value="BEST SELLER">BEST SELLER</option>
                   </select>
               </div>
 
-              {/* BUILD INTEL (Separated Fields) */}
+              {/* BUILD INTEL */}
               <div className="bg-white border-4 border-black p-6 shadow-brutal-sm space-y-4">
                   <label className="font-[1000] uppercase italic text-sm flex items-center gap-2 text-jungli-orange"><Zap size={20} fill="currentColor" /> BUILD INTEL (Materials)</label>
                   <input placeholder="EXTERIOR UPPER (E.G. TECH SKIN)" value={formData.material_upper} className="w-full p-3 border-2 border-black font-black uppercase italic text-xs outline-none focus:bg-gray-50" onChange={e => setFormData({...formData, material_upper: e.target.value})} />
@@ -198,19 +241,19 @@ function AddProductForm() {
               </div>
             </div>
 
-            {/* DATA FIELDS */}
+            {/* PRODUCT INFO */}
             <div className="space-y-6">
-              <input required value={formData.brand} placeholder="BRAND" className="w-full p-4 border-4 border-black font-[1000] uppercase italic shadow-brutal-sm" onChange={e => setFormData({ ...formData, brand: e.target.value })} />
+              <input required value={formData.brand} placeholder="BRAND (e.g. ADIDAS)" className="w-full p-4 border-4 border-black font-[1000] uppercase italic shadow-brutal-sm" onChange={e => setFormData({ ...formData, brand: e.target.value })} />
               <input required value={formData.name} placeholder="MODEL COLORWAY" className="w-full p-4 border-4 border-black font-[1000] uppercase italic shadow-brutal-sm" onChange={e => setFormData({ ...formData, name: e.target.value })} />
-              <input value={formData.model_group} placeholder="MODEL GROUP ID (LINKING)" className="w-full p-4 border-4 border-black font-[1000] uppercase italic shadow-brutal-sm bg-gray-50" onChange={e => setFormData({ ...formData, model_group: e.target.value })} />
+              <input value={formData.model_group} placeholder="MODEL GROUP ID (e.g. yeezy-350-series)" className="w-full p-4 border-4 border-black font-[1000] uppercase italic shadow-brutal-sm bg-gray-50" onChange={e => setFormData({ ...formData, model_group: e.target.value })} />
               <div className="grid grid-cols-2 gap-4">
-                <input required value={formData.luxury_price} type="number" placeholder="LUXURY" className="w-full p-4 border-4 border-black font-black shadow-brutal-sm" onChange={e => setFormData({ ...formData, luxury_price: e.target.value })} />
-                <input required value={formData.jungli_price} type="number" placeholder="JUNGLI" className="w-full p-4 border-4 border-black font-black shadow-brutal-sm text-jungli-orange" onChange={e => setFormData({ ...formData, jungli_price: e.target.value })} />
+                <input required value={formData.luxury_price} type="number" placeholder="LUXURY (Resale)" className="w-full p-4 border-4 border-black font-black shadow-brutal-sm" onChange={e => setFormData({ ...formData, luxury_price: e.target.value })} />
+                <input required value={formData.jungli_price} type="number" placeholder="JUNGLI (Selling)" className="w-full p-4 border-4 border-black font-black shadow-brutal-sm text-jungli-orange" onChange={e => setFormData({ ...formData, jungli_price: e.target.value })} />
               </div>
             </div>
           </div>
 
-          {/* QUALITY CHECKLIST & STORY */}
+          {/* 4. DETAILS */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             <div className="space-y-2">
                 <label className="font-[1000] uppercase italic text-sm flex items-center gap-2"><ListTodo size={20}/> Quality Checklist (One per line)</label>

@@ -44,12 +44,12 @@ export default function AdminReviews() {
         finalImageUrl = urlData.publicUrl;
       }
 
-      // 2. Insert Data
+      // 2. Insert Data (With defaults for empty fields)
       const { error } = await supabase.from('site_reviews').insert([{
-        customer_name: formData.name,
-        comment: formData.comment,
+        customer_name: formData.name.trim() || "ANONYMOUS HUNTER", // Default if empty
+        comment: formData.comment.trim(), // Can be empty
         rating: formData.rating,
-        product_name: formData.product_name,
+        product_name: formData.product_name.trim(), // Can be empty
         image_url: finalImageUrl
       }]);
 
@@ -67,10 +67,18 @@ export default function AdminReviews() {
     }
   };
 
+  // DELETE FUNCTION
   const deleteReview = async (id: string) => {
-    if(!confirm("Delete this review?")) return;
-    await supabase.from('site_reviews').delete().eq('id', id);
-    fetchReviews();
+    if(!confirm("ARE YOU SURE? THIS WILL DELETE THE REVIEW PERMANENTLY.")) return;
+    
+    const { error } = await supabase.from('site_reviews').delete().eq('id', id);
+    
+    if (!error) {
+        // Refresh the list immediately after deleting
+        setReviews(reviews.filter(r => r.id !== id));
+    } else {
+        alert("Delete failed: " + error.message);
+    }
   };
 
   return (
@@ -88,18 +96,45 @@ export default function AdminReviews() {
                     <h3 className="text-2xl font-[1000] uppercase italic mb-6">Add New Review</h3>
                     
                     <div className="space-y-4">
-                        <input required placeholder="CUSTOMER NAME" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-3 border-2 border-black font-bold uppercase italic outline-none" />
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-gray-400">Customer Name (Optional)</label>
+                            <input 
+                                placeholder="ANONYMOUS HUNTER" 
+                                value={formData.name} 
+                                onChange={e => setFormData({...formData, name: e.target.value})} 
+                                className="w-full p-3 border-2 border-black font-bold uppercase italic outline-none focus:bg-gray-50" 
+                            />
+                        </div>
                         
-                        <input placeholder="PRODUCT BOUGHT (OPTIONAL)" value={formData.product_name} onChange={e => setFormData({...formData, product_name: e.target.value})} className="w-full p-3 border-2 border-black font-bold uppercase italic outline-none" />
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-gray-400">Product Name (Optional)</label>
+                            <input 
+                                placeholder="E.G. TRAVIS SCOTT LOW" 
+                                value={formData.product_name} 
+                                onChange={e => setFormData({...formData, product_name: e.target.value})} 
+                                className="w-full p-3 border-2 border-black font-bold uppercase italic outline-none focus:bg-gray-50" 
+                            />
+                        </div>
 
-                        <textarea required placeholder="THEIR FEEDBACK..." rows={3} value={formData.comment} onChange={e => setFormData({...formData, comment: e.target.value})} className="w-full p-3 border-2 border-black font-bold uppercase italic outline-none" />
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-gray-400">Feedback (Optional)</label>
+                            <textarea 
+                                placeholder="WRITE FEEDBACK..." 
+                                rows={3} 
+                                value={formData.comment} 
+                                onChange={e => setFormData({...formData, comment: e.target.value})} 
+                                className="w-full p-3 border-2 border-black font-bold uppercase italic outline-none focus:bg-gray-50" 
+                            />
+                        </div>
 
                         <div className="flex items-center gap-2">
                             <span className="font-black uppercase text-xs">Rating:</span>
-                            <select value={formData.rating} onChange={e => setFormData({...formData, rating: Number(e.target.value)})} className="p-2 border-2 border-black font-black">
-                                <option value="5">5 STARS</option>
+                            <select value={formData.rating} onChange={e => setFormData({...formData, rating: Number(e.target.value)})} className="p-2 border-2 border-black font-black w-full outline-none">
+                                <option value="5">5 STARS (Recommended)</option>
                                 <option value="4">4 STARS</option>
                                 <option value="3">3 STARS</option>
+                                <option value="2">2 STARS</option>
+                                <option value="1">1 STAR</option>
                             </select>
                         </div>
 
@@ -107,7 +142,7 @@ export default function AdminReviews() {
                             <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files?.[0] || null)} className="absolute inset-0 opacity-0 cursor-pointer" />
                             <div className="flex flex-col items-center gap-2">
                                 <Upload size={20} />
-                                <span className="text-xs font-black uppercase">{imageFile ? "IMAGE SELECTED" : "UPLOAD PHOTO"}</span>
+                                <span className="text-xs font-black uppercase">{imageFile ? "IMAGE SELECTED" : "UPLOAD PHOTO (OPTIONAL)"}</span>
                             </div>
                         </div>
 
@@ -118,29 +153,49 @@ export default function AdminReviews() {
                 </form>
             </div>
 
-            {/* RIGHT: LIST */}
-            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                {reviews.map((review) => (
-                    <div key={review.id} className="bg-white border-4 border-black p-4 shadow-brutal-sm flex gap-4">
-                        <div className="w-20 h-20 bg-gray-100 border-2 border-black flex-shrink-0">
-                            {review.image_url ? (
-                                <img src={review.image_url} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center"><ImageIcon className="text-gray-300"/></div>
-                            )}
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex justify-between items-start">
-                                <h4 className="font-[1000] uppercase italic">{review.customer_name}</h4>
-                                <button onClick={() => deleteReview(review.id)} className="text-red-600 hover:scale-110"><Trash2 size={16}/></button>
+            {/* RIGHT: MANAGEMENT LIST */}
+            <div className="lg:col-span-2 space-y-4">
+                <h3 className="font-black uppercase italic text-lg border-b-4 border-black pb-2">Live Reviews ({reviews.length})</h3>
+                
+                <div className="grid grid-cols-1 gap-4">
+                    {reviews.map((review) => (
+                        <div key={review.id} className="bg-white border-4 border-black p-4 shadow-brutal-sm flex gap-4 items-center">
+                            {/* Image Thumbnail */}
+                            <div className="w-20 h-20 bg-gray-100 border-2 border-black flex-shrink-0">
+                                {review.image_url ? (
+                                    <img src={review.image_url} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center"><ImageIcon className="text-gray-300"/></div>
+                                )}
                             </div>
-                            <div className="flex text-jungli-orange my-1">
-                                {[...Array(review.rating)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
+
+                            {/* Details */}
+                            <div className="flex-1">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h4 className="font-[1000] uppercase italic text-lg leading-none">{review.customer_name}</h4>
+                                        {review.product_name && <span className="text-[10px] font-black bg-gray-100 px-1 uppercase">{review.product_name}</span>}
+                                    </div>
+                                    <div className="flex text-jungli-orange">
+                                        {[...Array(review.rating)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
+                                    </div>
+                                </div>
+                                <p className="text-xs font-bold text-gray-500 italic mt-2 line-clamp-2">
+                                    {review.comment ? `"${review.comment}"` : <span className="opacity-50">No text provided</span>}
+                                </p>
                             </div>
-                            <p className="text-xs font-bold text-gray-500 italic line-clamp-2">"{review.comment}"</p>
+
+                            {/* DELETE BUTTON */}
+                            <button 
+                                onClick={() => deleteReview(review.id)} 
+                                className="bg-red-600 text-white p-3 border-2 border-black hover:bg-black transition-colors shadow-brutal-sm active:translate-x-1 active:translate-y-1 active:shadow-none"
+                                title="Delete Review"
+                            >
+                                <Trash2 size={20}/>
+                            </button>
                         </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
         </div>
       </div>

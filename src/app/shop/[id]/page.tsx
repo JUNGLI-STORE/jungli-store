@@ -274,7 +274,7 @@ export default function ProductPage() {
                 </h4>
                 <p className="font-bold text-[10px] uppercase text-gray-600 leading-relaxed mb-4">
                     Hunting for a different colorway? Can't find a rare design? Need a bulk order for your squad? 
-                    The Jungle has deep connections. Tell us know what you need.
+                    The Jungle has deep connections. Tell us what you need.
                 </p>
                 <a 
                     href={`https://wa.me/919713524844?text=Hey Jungli Team, regarding ${product.name} (ID: ${product.id}): I have a custom query...`}
