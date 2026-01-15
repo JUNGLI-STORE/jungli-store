@@ -67,7 +67,11 @@ export default function CheckoutPage() {
   const finalTotal = totalPrice - hunterDiscount - upiDiscount + deliveryCharge;
 
   const handleProcessOrder = async () => {
-    if (!user) { setShowAuthModal(true); return; }
+    // 1. Validation
+    if (!user) { 
+        setShowAuthModal(true); 
+        return; 
+    }
     if (!formData.name || !formData.phone || !formData.pincode || !formData.address) {
       alert("FILL ALL SHIPPING INTEL!");
       return;
@@ -75,8 +79,10 @@ export default function CheckoutPage() {
 
     setLoading(true);
 
+    // 2. UPI PAYMENT FLOW
     if (paymentMethod === 'UPI') {
       try {
+        // Create Order on Server (Razorpay)
         const response = await fetch("/api/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -84,6 +90,12 @@ export default function CheckoutPage() {
         });
         const order = await response.json();
         
+        if (order.error) {
+            alert("Payment Initialization Failed: " + order.error);
+            setLoading(false);
+            return;
+        }
+
         const options = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
           amount: order.amount,
@@ -92,8 +104,10 @@ export default function CheckoutPage() {
           description: "Stash Secured via UPI",
           image: "/logo.svg",
           order_id: order.id,
+          // --- ROBUST HANDLER START ---
           handler: async function (response: any) {
-            await supabase.from('orders').insert([{
+            // Save to Supabase
+            const { error } = await supabase.from('orders').insert([{
               customer_name: formData.name,
               email: user.email,
               phone: formData.phone,
@@ -106,18 +120,40 @@ export default function CheckoutPage() {
               payment_method: 'UPI',
               applied_promo: activeHunterCode
             }]);
-            if (activeHunterCode) await supabase.rpc('increment_hunter_sales', { code_param: activeHunterCode });
-            window.location.href = "/success";
+
+            // Catch Supabase Errors
+            if (error) {
+                console.error("DB SAVE ERROR:", error);
+                alert("PAYMENT SUCCESSFUL, BUT ORDER SAVE FAILED. \n\nPlease screenshot this and contact support: " + error.message);
+                // Do NOT redirect if save failed, so user sees the error
+            } else {
+                // Success
+                if (activeHunterCode) await supabase.rpc('increment_hunter_sales', { code_param: activeHunterCode });
+                window.location.href = "/success";
+            }
           },
+          // --- ROBUST HANDLER END ---
           prefill: { contact: formData.phone, email: user.email },
           theme: { color: "#FF5F1F" },
         };
+
         const rzp = new (window as any).Razorpay(options);
+        
+        // Handle User Closing Payment Popup
+        rzp.on('payment.failed', function (response: any){
+            alert("Payment Failed: " + response.error.description);
+            setLoading(false);
+        });
+
         rzp.open();
-      } catch (err) { alert("Payment Failed"); }
-      finally { setLoading(false); }
+
+      } catch (err: any) { 
+          alert("System Error: " + err.message); 
+          setLoading(false); 
+      }
 
     } else {
+      // 3. COD FLOW
       const { error } = await supabase.from('orders').insert([{
         customer_name: formData.name,
         email: user.email,
@@ -135,8 +171,10 @@ export default function CheckoutPage() {
       if (!error) {
         if (activeHunterCode) await supabase.rpc('increment_hunter_sales', { code_param: activeHunterCode });
         window.location.href = "/success";
-      } else { alert("COD order failed"); }
-      setLoading(false);
+      } else { 
+          alert("COD Order Failed: " + error.message); 
+          setLoading(false);
+      }
     }
   };
 
@@ -241,7 +279,7 @@ export default function CheckoutPage() {
                     )}
                     
                     {hunterDiscount > 0 && (
-                       /* --- NOW GREEN FOR SUCCESSFUL APPLIED CODE --- */
+                       /* --- GREEN FOR SUCCESSFUL APPLIED CODE --- */
                        <div className="flex justify-between items-center text-sm md:text-base text-green-600 bg-green-50 px-2 py-1">
                            <span className="font-[1000] uppercase italic">Hunter Credit Applied</span>
                            <span className="font-[1000]">- ₹{hunterDiscount}</span>
