@@ -5,12 +5,12 @@ import Navbar from "@/components/Navbar";
 import CartSidebar from "@/components/CartSidebar";
 import PreLoader from "@/components/PreLoader";
 import Footer from "@/components/Footer";
-import ReviewsWidget from "@/components/ReviewsWidget"; // 👈 IMPORTED WIDGET
+import ReviewsWidget from "@/components/ReviewsWidget";
 
 // 1. IMPORT TRACKING ENGINES
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import Script from "next/script";
+import Script from "next/script"; // <--- Needed for Meta Pixel
 
 import "./globals.css";
 
@@ -41,7 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* 2. UMAMI TRACKING SCRIPT */}
+        {/* UMAMI TRACKING SCRIPT (Existing) */}
         <Script
           async
           src="https://cloud.umami.is/script.js"
@@ -53,6 +53,37 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
+        {/* --- META PIXEL CODE START --- */}
+        <Script
+          id="fb-pixel"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              !function(f,b,e,v,n,t,s)
+              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+              n.queue=[];t=b.createElement(e);t.async=!0;
+              t.src=v;s=b.getElementsByTagName(e)[0];
+              s.parentNode.insertBefore(t,s)}(window, document,'script',
+              'https://connect.facebook.net/en_US/fbevents.js');
+              fbq('init', '1578316510103133');
+              fbq('track', 'PageView');
+            `,
+          }}
+        />
+        {/* Fallback for disabled JS */}
+        <noscript>
+          <img 
+            height="1" 
+            width="1" 
+            style={{ display: 'none' }}
+            src="https://www.facebook.com/tr?id=1578316510103133&ev=PageView&noscript=1"
+            alt="facebook_pixel"
+          />
+        </noscript>
+        {/* --- META PIXEL CODE END --- */}
+
         <CartProvider>
           
           <PreLoader /> 
@@ -65,10 +96,8 @@ export default function RootLayout({
 
           <CartSidebar />
           
-          {/* THE NEW FLOATING REVIEWS WIDGET */}
           <ReviewsWidget />
 
-          {/* 3. VERCEL TRACKING ENGINES */}
           <Analytics />
           <SpeedInsights />
 

@@ -237,7 +237,7 @@ export default function ProfilePage() {
                                 value={profile.full_name}
                                 onChange={(e) => setProfile({...profile, full_name: e.target.value})}
                                 className="w-full p-4 border-4 border-black font-black uppercase italic outline-none focus:bg-jungli-orange/5 shadow-brutal-sm" 
-                                placeholder="ARYAN SHARMA"
+                                placeholder="RAHUL KUMAR"
                             />
                         </div>
 
