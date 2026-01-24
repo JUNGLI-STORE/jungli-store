@@ -128,6 +128,16 @@ export default function CheckoutPage() {
                 alert("PAYMENT SUCCESSFUL, BUT ORDER SAVE FAILED. \n\nPlease screenshot this and contact support: " + error.message);
                 // Do NOT redirect if save failed, so user sees the error
             } else {
+                // 1. TRACK PURCHASE EVENT (UPI)
+                if (typeof window !== 'undefined' && (window as any).fbq) {
+                  (window as any).fbq('track', 'Purchase', {
+                    value: finalTotal,
+                    currency: 'INR',
+                    content_name: 'Stash Order',
+                    transaction_id: response.razorpay_payment_id,
+                  });
+                }
+
                 // Success
                 if (activeHunterCode) await supabase.rpc('increment_hunter_sales', { code_param: activeHunterCode });
                 window.location.href = "/success";
@@ -171,6 +181,16 @@ export default function CheckoutPage() {
       }]);
 
       if (!error) {
+        // 2. TRACK PURCHASE EVENT (COD)
+        if (typeof window !== 'undefined' && (window as any).fbq) {
+          (window as any).fbq('track', 'Purchase', {
+            value: finalTotal,
+            currency: 'INR',
+            content_name: 'Stash Order (COD)',
+            transaction_id: 'COD_' + Math.floor(Math.random() * 1000000),
+          });
+        }
+
         if (activeHunterCode) await supabase.rpc('increment_hunter_sales', { code_param: activeHunterCode });
         window.location.href = "/success";
       } else { 

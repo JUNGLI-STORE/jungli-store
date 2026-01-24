@@ -1,17 +1,27 @@
 "use client";
 import { motion, AnimatePresence } from 'framer-motion';
-import { useCart, CartItem } from '@/context/CartContext'; // Ensure CartItem is exported from your context
+import { useCart, CartItem } from '@/context/CartContext'; 
 import { X, Trash2, ArrowRight } from 'lucide-react';
-import { useRouter } from 'next/navigation'; // 1. Added for redirection
+import { useRouter } from 'next/navigation';
 
 export default function CartSidebar() {
   const { cart, isCartOpen, setIsCartOpen, removeFromCart, totalPrice } = useCart();
-  const router = useRouter(); // 2. Initialize router
+  const router = useRouter(); 
 
-  // 3. Logic to handle the transition to checkout
   const handleCheckout = () => {
-    setIsCartOpen(false); // Close cart sidebar first
-    router.push('/checkout'); // Redirect to checkout page
+    // 1. TRACK INITIATE CHECKOUT PIXEL EVENT
+    if (typeof window !== 'undefined' && (window as any).fbq) {
+      (window as any).fbq('track', 'InitiateCheckout', {
+        value: totalPrice,
+        currency: 'INR',
+        num_items: cart.length,
+        content_ids: cart.map(item => item.id),
+      });
+    }
+
+    // 2. Navigation Logic
+    setIsCartOpen(false); 
+    router.push('/checkout'); 
   };
 
   return (
@@ -82,7 +92,6 @@ export default function CartSidebar() {
                   <span className="text-3xl font-[1000] tracking-tighter text-black italic">₹{totalPrice.toLocaleString()}</span>
                 </div>
                 
-                {/* 4. Updated Checkout Button */}
                 <button 
                   onClick={handleCheckout}
                   className="w-full bg-jungli-orange text-white font-[1000] py-5 border-4 border-black shadow-brutal hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all uppercase italic flex items-center justify-center gap-3 group active:scale-95"
